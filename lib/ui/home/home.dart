@@ -111,13 +111,34 @@ class _HomeTabPageState extends State<HomeTabPage> {
   }
 
   Widget getBody() {
-    bool showLoading = songs.isEmpty;
-    if (showLoading) {
-      return getProgressBar();
-    } else {
-      return getListView();
-    }
-  }
+  return Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: TextField(
+          onChanged: (value) {
+            _viewModel.searchByKeyword(value);
+          },
+          decoration: InputDecoration(
+            hintText: 'Tìm kiếm theo nhạc sĩ,bài hát...',
+            prefixIcon: Icon(Icons.search),
+            filled: true,
+            fillColor: Colors.grey[200],
+            contentPadding: EdgeInsets.symmetric(vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ),
+      Expanded(
+        child: songs.isEmpty ? Text("Không thấy bài hát") : getListView(),
+      ),
+    ],
+  );
+}
+
 
   Widget getProgressBar() {
     return const Center(
@@ -150,13 +171,14 @@ class _HomeTabPageState extends State<HomeTabPage> {
     );
   }
 
-  void observeData() {
-    _viewModel.songStream.stream.listen((songList) {
-      setState(() {
-        songs.addAll(songList);
-      });
+ void observeData() {
+  _viewModel.songStream.stream.listen((songList) {
+    setState(() {
+      songs = songList;
     });
-  }
+  });
+}
+
 
   void showBottomSheet() {
     showModalBottomSheet(
