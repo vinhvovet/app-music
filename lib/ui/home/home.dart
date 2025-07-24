@@ -133,7 +133,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
         ),
       ),
       Expanded(
-        child: songs.isEmpty ? Text("Không thấy bài hát") : getListView(),
+        child: songs.isEmpty ? Text("Không tìm thấy ") : getListView(),
       ),
     ],
   );

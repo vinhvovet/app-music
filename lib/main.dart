@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
 import 'firebase_options.dart';
 import 'package:music_app/ui/home/home.dart';
-import 'package:music_app/ui/home/viewmodel.dart'; // ✅
+import 'package:music_app/ui/home/viewmodel.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

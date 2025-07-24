@@ -7,6 +7,7 @@ class Song {
     required this.source,
     required this.image,
     required this.duration,
+    this.isFavorite = false
   });
 
   factory Song.fromJson(Map<String, dynamic> map) {
@@ -28,6 +29,7 @@ class Song {
   String source;
   String image;
   int duration;
+  bool isFavorite;
 
   @override
   bool operator ==(Object other) =>
