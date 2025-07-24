@@ -1,38 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:music_app/album.dart';
-import 'album_provider.dart';
-import 'album_list_screen.dart';
-import 'song_detail_screen.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:music_app/ui/home/home.dart';
 
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AlbumProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  );
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Album App',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const AlbumListScreen(),
-        SongDetailScreen.routeName: (context) {
-          final album = ModalRoute.of(context)!.settings.arguments as Album;
-          return SongDetailScreen(album: album);
-        },
-      },
-    );
-  }
-}
+void main() => runApp(const MusicApp());
