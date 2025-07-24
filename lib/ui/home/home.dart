@@ -4,7 +4,7 @@ import 'package:music_app/ui/discovery/discovery.dart';
 import 'package:music_app/ui/home/viewmodel.dart';
 import 'package:music_app/ui/now_playing/audio_player_manager.dart';
 import 'package:music_app/ui/settings/settings.dart';
-import 'package:music_app/ui/user/user.dart';
+import 'package:music_app/ui/account/user.dart';
 
 import '../../data/model/song.dart';
 import '../now_playing/playing.dart';
@@ -46,6 +46,7 @@ class _MusicHomePageState extends State<MusicHomePage> {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Music App'),
+        backgroundColor: Color(0xFF21293E),
       ),
       child: CupertinoTabScaffold(
         tabBar: CupertinoTabBar(
