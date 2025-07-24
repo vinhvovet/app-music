@@ -7,31 +7,52 @@ class AudioPlayerManager {
   static final AudioPlayerManager _instance = AudioPlayerManager._internal();
 
   factory AudioPlayerManager() => _instance;
+  String get currentUrl => _songUrl;
 
-  final player = AudioPlayer();
+
+  AudioPlayer? _player;
   Stream<DurationState>? durationState;
-  String songUrl = "";
+  String _songUrl = "";
 
-  void prepare({bool isNewSong = false}) {
+  AudioPlayer get player {
+    _player ??= AudioPlayer();
+    return _player!;
+  }
+
+  Future<void> prepare({bool isNewSong = false}) async {
+    if (_songUrl.isEmpty) return;
+
     durationState = Rx.combineLatest2<Duration, PlaybackEvent, DurationState>(
-        player.positionStream,
-        player.playbackEventStream,
-        (position, playbackEvent) => DurationState(
-            progress: position,
-            buffered: playbackEvent.bufferedPosition,
-            total: playbackEvent.duration));
+      player.positionStream,
+      player.playbackEventStream,
+      (position, playbackEvent) => DurationState(
+        progress: position,
+        buffered: playbackEvent.bufferedPosition,
+        total: playbackEvent.duration,
+      ),
+    );
+
     if (isNewSong) {
-      player.setUrl(songUrl);
+      try {
+        await player.setUrl(_songUrl);
+      } catch (e) {
+        print("🔴 Error setting song URL: $e");
+      }
     }
   }
 
-  void updateSongUrl(String url) {
-    songUrl = url;
-    prepare();
+  Future<void> updateSongUrl(String url) async {
+    _songUrl = url;
+    await prepare(isNewSong: true);
   }
 
-  void dispose() {
-    player.dispose();
+  Future<void> stop() async {
+    await player.stop();
+  }
+
+  Future<void> dispose() async {
+    await player.dispose();
+    _player = null; // Để player được tạo lại nếu cần
   }
 }
 

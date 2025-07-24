@@ -54,7 +54,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       duration: const Duration(milliseconds: 12000),
     );
     _audioPlayerManager = AudioPlayerManager();
-    if (_audioPlayerManager.songUrl.compareTo(_song.source) != 0) {
+if (_audioPlayerManager.currentUrl != _song.source) {
       _audioPlayerManager.updateSongUrl(_song.source);
       _audioPlayerManager.prepare(isNewSong: true);
     } else {
