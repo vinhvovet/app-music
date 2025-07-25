@@ -1,81 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:music_app/data/model/song.dart';
-import 'package:music_app/state%20management/provider.dart';
+import 'package:music_app/state management/provider.dart';
+import 'package:music_app/ui/now_playing/playing.dart'; // import màn hình NowPlaying
 import 'package:provider/provider.dart';
-import '../home/viewmodel.dart';
 
-class DiscoveryTab extends StatefulWidget {
-  const DiscoveryTab({super.key});
-
-  @override
-  State<DiscoveryTab> createState() => _DiscoveryTabState();
-}
-
-class _DiscoveryTabState extends State<DiscoveryTab> {
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<ProviderStateManagement>(
-      builder:
-          (context, provider, child) => Scaffold(
-            body: SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => ListFavorite()),
-                      );
-                    },
-                    child: Container(
-                      height: 200,
-                      width: 100,
-                      child: Center(child: Icon(Icons.favorite)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-    );
-  }
-}
-
-class ListFavorite extends StatefulWidget {
+class ListFavorite extends StatelessWidget {
   const ListFavorite({super.key});
 
   @override
-  State<ListFavorite> createState() => _ListFavoriteState();
-}
-
-class _ListFavoriteState extends State<ListFavorite> {
-  @override
   Widget build(BuildContext context) {
-    return Consumer<ProviderStateManagement>(
-      builder:
-          (context, provider, child) => Scaffold(
-            body: SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  children:
-                      provider.favoriteSongs
-                          .map(
-                            (song) => ListTile(
-                              leading: Image.network(
-                                song.image,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              ),
-                              title: Text(song.title),
-                              subtitle: Text(song.artist),
-                            ),
-                          )
-                          .toList(),
+    final provider = context.watch<ProviderStateManagement>();
+    final favSongs = provider.favoriteSongs;
+
+    return Scaffold(
+      appBar: AppBar(title: const Center(child: Text("Những bài hát yêu thích"))),
+      
+      body: SafeArea(
+        child: favSongs.isEmpty
+            ? const Center(
+                child: Text(
+                  "Không có dữ liệu",
+                  style: TextStyle(color: Colors.white70),
                 ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: favSongs.length,
+                itemBuilder: (context, index) {
+                  final song = favSongs[index];
+                  return Card(
+                    
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          song.image,
+                          width:  50,
+                          height:  50,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      title: Text(
+                        song.title,
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 16),
+                      ),
+                      subtitle: Text(
+                        song.artist,
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 14),
+                      ),
+                      trailing: const Icon(
+                        Icons.play_arrow,
+                        color: Colors.grey,
+                      ),
+                      onTap: () {
+                        // Khi nhấn vào, điều hướng sang NowPlaying
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => NowPlaying(
+                              playingSong: song,
+                              songs: favSongs,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
-            ),
-          ),
+      ),
     );
   }
 }

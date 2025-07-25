@@ -16,7 +16,7 @@ class MusicApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Music App',
+      title: 'Nghe nhạc ',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
@@ -37,7 +37,7 @@ class MusicHomePage extends StatefulWidget {
 class _MusicHomePageState extends State<MusicHomePage> {
   final List<Widget> _tabs = [
     const HomeTab(),
-    const DiscoveryTab(),
+    const ListFavorite(),
     const AccountTab(),
     const SettingsTab(),
   ];
@@ -46,19 +46,19 @@ class _MusicHomePageState extends State<MusicHomePage> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('Music App'),
+        middle: Text('Nghe nhạc'),
         backgroundColor: Color(0xFF21293E),
       ),
       child: CupertinoTabScaffold(
         tabBar: CupertinoTabBar(
           backgroundColor: Theme.of(context).colorScheme.onInverseSurface,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chính'),
             BottomNavigationBarItem(
-                icon: Icon(Icons.album), label: 'Discovery'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
+                icon: Icon(Icons.album), label: 'Yêu thích'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Tài khoản'),
             BottomNavigationBarItem(
-                icon: Icon(Icons.settings), label: 'Settings'),
+                icon: Icon(Icons.settings), label: 'Cài đặt'),
           ],
         ),
         tabBuilder: (BuildContext context, int index) {

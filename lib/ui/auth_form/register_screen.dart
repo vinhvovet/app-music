@@ -53,11 +53,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF21293E),
       appBar: AppBar(
-        title: const Text('Đăng ký'),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+        title: const Text('Đăng ký',style: TextStyle(color: Colors.black),),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
       ),
       body: Padding(
@@ -73,15 +72,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _emailController,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.black),
               decoration: const InputDecoration(
                 labelText: 'Email',
-                labelStyle: TextStyle(color: Colors.white),
+                labelStyle: TextStyle(color: Colors.black),
                 enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.white54),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+                  borderSide: BorderSide(color: Colors.black),
                 ),
               ),
             ),
@@ -89,15 +88,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             TextField(
               controller: _passwordController,
               obscureText: true,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.black),
               decoration: const InputDecoration(
                 labelText: 'Mật khẩu (>= 6 ký tự)',
-                labelStyle: TextStyle(color: Colors.white),
+                labelStyle: TextStyle(color: Colors.black),
                 enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.white54),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+                  borderSide: BorderSide(color: Colors.black),
                 ),
               ),
             ),
@@ -105,15 +104,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             TextField(
               controller: _confirmPasswordController,
               obscureText: true,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.black),
               decoration: const InputDecoration(
                 labelText: 'Nhập lại mật khẩu',
-                labelStyle: TextStyle(color: Colors.white),
+                labelStyle: TextStyle(color: Colors.black),
                 enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.white54),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+                  borderSide: BorderSide(color: Colors.black),
                 ),
               ),
             ),

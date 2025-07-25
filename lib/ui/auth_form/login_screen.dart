@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF21293E),
+
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -52,14 +52,14 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 60),
-              const Icon(Icons.music_note, size: 80, color: Colors.white),
+              const Icon(Icons.music_note, size: 80, color: Colors.deepPurple),
               const SizedBox(height: 20),
               const Text(
-                'Music App',
+                'Để nghe nhạc',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
               ),
               const SizedBox(height: 32),
@@ -74,10 +74,10 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  labelStyle: const TextStyle(color: Colors.white70),
+                  labelStyle: const TextStyle(color: Colors.black),
                   filled: true,
                   fillColor: Colors.white12,
                   border: OutlineInputBorder(
@@ -89,10 +89,10 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: true,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   labelText: 'Mật khẩu',
-                  labelStyle: const TextStyle(color: Colors.white70),
+                  labelStyle: const TextStyle(color: Colors.black),
                   filled: true,
                   fillColor: Colors.white12,
                   border: OutlineInputBorder(
@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
                 child: const Text(
                   'Chưa có tài khoản? Đăng ký',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: Colors.black),
                 ),
               ),
             ],
