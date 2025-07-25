@@ -11,24 +11,9 @@ class SettingsTab extends StatefulWidget {
 }
 
 class _SettingsTabState extends State<SettingsTab> {
-  bool _isDarkMode = false;
-  String _selectedLanguage = 'Tiếng Việt';
 
-  void _toggleDarkMode(bool value) {
-    setState(() {
-      _isDarkMode = value;
-      // TODO: Áp dụng thay đổi theme toàn app nếu cần
-    });
-  }
 
-  void _changeLanguage(String? value) {
-    setState(() {
-      if (value != null) {
-        _selectedLanguage = value;
-        // TODO: Lưu ngôn ngữ bằng SharedPreferences hoặc Provider
-      }
-    });
-  }
+
 
   void _logout() async {
     final confirm = await showDialog<bool>(

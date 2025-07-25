@@ -15,6 +15,16 @@ class MusicAppViewModel {
       }
     });
   }
+List<Song> get favoriteSongs =>
+    _allSongs.where((song) => song.isFavorite).toList();
+
+void toggleFavorite(Song song) {
+  final index = _allSongs.indexWhere((s) => s.id == song.id);
+  if (index != -1) {
+    _allSongs[index].isFavorite = !_allSongs[index].isFavorite;
+    songStream.add(_allSongs); // update stream
+  }
+}
 
   void searchByKeyword(String query) {
     if (query.isEmpty) {

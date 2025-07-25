@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:music_app/state%20management/provider.dart';
 import 'package:provider/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
 import 'firebase_options.dart';
@@ -25,7 +26,8 @@ class RootApp extends StatelessWidget {
         Provider<MusicAppViewModel>(
           create: (_) => MusicAppViewModel()..loadSongs(),
           dispose: (_, viewModel) => viewModel.songStream.close(),
-        )
+        ),
+        ChangeNotifierProvider(create: (context)=> ProviderStateManagement())
       ],
       child: MaterialApp(
         title: 'Music App',

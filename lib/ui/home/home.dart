@@ -5,6 +5,7 @@ import 'package:music_app/ui/home/viewmodel.dart';
 import 'package:music_app/ui/now_playing/audio_player_manager.dart';
 import 'package:music_app/ui/settings/settings.dart';
 import 'package:music_app/ui/account/user.dart';
+import 'package:provider/provider.dart';
 
 import '../../data/model/song.dart';
 import '../now_playing/playing.dart';
@@ -228,7 +229,7 @@ class _SongItemSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
+    return Consumer(builder: (context , _ , child)=>ListTile(
       contentPadding: const EdgeInsets.only(
         left: 24,
         right: 8,
@@ -260,6 +261,7 @@ class _SongItemSection extends StatelessWidget {
       onTap: () {
         parent.navigate(song);
       },
+    )
     );
   }
 }
