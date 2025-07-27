@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:music_app/data/model/song.dart';
 import 'package:music_app/state management/provider.dart';
 import 'package:music_app/ui/now_playing/playing.dart'; // import màn hình NowPlaying
 import 'package:provider/provider.dart';
@@ -14,7 +13,6 @@ class ListFavorite extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Center(child: Text("Những bài hát yêu thích"))),
-      
       body: SafeArea(
         child: favSongs.isEmpty
             ? const Center(
@@ -29,7 +27,6 @@ class ListFavorite extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final song = favSongs[index];
                   return Card(
-                    
                     margin: const EdgeInsets.only(bottom: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -41,28 +38,24 @@ class ListFavorite extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                         child: Image.network(
                           song.image,
-                          width:  50,
-                          height:  50,
+                          width: 50,
+                          height: 50,
                           fit: BoxFit.cover,
                         ),
                       ),
                       title: Text(
                         song.title,
-                        style:
-                            const TextStyle(color: Colors.black, fontSize: 16),
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
                       ),
                       subtitle: Text(
                         song.artist,
-                        style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 14),
+                        style: const TextStyle(color: Colors.black, fontSize: 14),
                       ),
                       trailing: const Icon(
                         Icons.play_arrow,
                         color: Colors.grey,
                       ),
                       onTap: () {
-                        // Khi nhấn vào, điều hướng sang NowPlaying
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => NowPlaying(

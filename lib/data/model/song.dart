@@ -21,6 +21,26 @@ class Song {
       duration: map['duration'],
     );
   }
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'album': album,
+      'artist': artist,
+      'source': source,
+      'image': image,
+      'duration': duration,
+    };
+    }
+    // Chuyển thành map để lưu Firestore nếu cần
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'artist': artist,
+      'album': album,
+    };
+  }
 
   String id;
   String title;
@@ -30,6 +50,7 @@ class Song {
   String image;
   int duration;
   bool isFavorite;
+
 
   @override
   bool operator ==(Object other) =>
@@ -44,4 +65,6 @@ class Song {
     return 'Song{id: $id, title: $title, album: $album, artist: $artist, '
         'source: $source, image: $image, duration: $duration}';
   }
+  
 }
+

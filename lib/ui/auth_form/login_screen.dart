@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/home/home.dart';
 import 'package:music_app/ui/auth_form/register_screen.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,33 +18,37 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
   bool _loading = false;
 
-  Future<void> _login() async {
-    setState(() {
-      _error = null;
-      _loading = true;
-    });
+ Future<void> _login() async {
+  setState(() {
+    _error = null;
+    _loading = true;
+  });
 
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+  try {
+    final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+
+    if (context.mounted) {
+      final provider = context.read<ProviderStateManagement>();
+      await provider.loadFavorites(); // Tải danh sách yêu thích từ Firestore
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MusicApp()),
       );
-
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MusicApp()),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      setState(() => _error = e.message);
-    } finally {
-      setState(() => _loading = false);
     }
+  } on FirebaseAuthException catch (e) {
+    setState(() => _error = e.message);
+  } finally {
+    setState(() => _loading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {
+     final provider = context.read<ProviderStateManagement>();
     return Scaffold(
 
       body: Center(
@@ -122,11 +128,13 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () {
+                onPressed: () async{
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const RegisterScreen()),
                   );
+                  await provider.loadFavorites(); // Tải danh sách yêu thích từ Firestore
+              
                 },
                 child: const Text(
                   'Chưa có tài khoản? Đăng ký',

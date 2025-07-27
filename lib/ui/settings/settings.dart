@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
+import 'package:provider/provider.dart';
  // giả sử đã tạo
 
 class SettingsTab extends StatefulWidget {
@@ -15,41 +17,43 @@ class _SettingsTabState extends State<SettingsTab> {
 
 
 
-  void _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2B3147),
-        title: const Text('Đăng xuất', style: TextStyle(color: Colors.white)),
-        content: const Text('Bạn có chắc chắn muốn đăng xuất?',
-            style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+void _logout() async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF2B3147),
+      title: const Text('Đăng xuất', style: TextStyle(color: Colors.white)),
+      content: const Text('Bạn có chắc chắn muốn đăng xuất?',
+          style: TextStyle(color: Colors.white70)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
 
-    if (confirm == true) {
-      await FirebaseAuth.instance.signOut();
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã đăng xuất')),
-        );
-      }
+  if (confirm == true) {
+    final provider = context.read<ProviderStateManagement>();
+       // giả sử đã tạo
+
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã đăng xuất')),
+      );
     }
   }
-
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(

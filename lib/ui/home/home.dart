@@ -1,14 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:music_app/ui/discovery/discovery.dart';
 import 'package:music_app/ui/home/viewmodel.dart';
-import 'package:music_app/ui/now_playing/audio_player_manager.dart';
+import 'package:music_app/ui/now_playing/playing.dart';
 import 'package:music_app/ui/settings/settings.dart';
 import 'package:music_app/ui/account/user.dart';
-import 'package:provider/provider.dart';
-
 import '../../data/model/song.dart';
-import '../now_playing/playing.dart';
 
 class MusicApp extends StatelessWidget {
   const MusicApp({super.key});
@@ -54,11 +52,9 @@ class _MusicHomePageState extends State<MusicHomePage> {
           backgroundColor: Theme.of(context).colorScheme.onInverseSurface,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chính'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.album), label: 'Yêu thích'),
+            BottomNavigationBarItem(icon: Icon(Icons.album), label: 'Yêu thích'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Tài khoản'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.settings), label: 'Cài đặt'),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Cài đặt'),
           ],
         ),
         tabBuilder: (BuildContext context, int index) {
@@ -91,59 +87,43 @@ class _HomeTabPageState extends State<HomeTabPage> {
 
   @override
   void initState() {
+    super.initState();
     _viewModel = MusicAppViewModel();
     _viewModel.loadSongs();
     observeData();
-    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: getBody(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _viewModel.songStream.close();
-    AudioPlayerManager().dispose();
-    super.dispose();
-  }
-
-  Widget getBody() {
-  return Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: TextField(
-          onChanged: (value) {
-            _viewModel.searchByKeyword(value);
-          },
-          decoration: InputDecoration(
-            hintText: 'Tìm kiếm theo nhạc sĩ,bài hát...',
-            prefixIcon: Icon(Icons.search),
-            filled: true,
-            fillColor: Colors.grey[200],
-            contentPadding: EdgeInsets.symmetric(vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide.none,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              onChanged: (value) {
+                _viewModel.searchByKeyword(value);
+              },
+              decoration: InputDecoration(
+                hintText: 'Tìm kiếm theo nhạc sĩ, bài hát...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.grey[200],
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
           ),
-        ),
+          Expanded(
+            child: songs.isEmpty
+                ? const Text("Không tìm thấy bài hát nào.")
+                : getListView(),
+          ),
+        ],
       ),
-      Expanded(
-        child: songs.isEmpty ? Text("Không tìm thấy ") : getListView(),
-      ),
-    ],
-  );
-}
-
-
-  Widget getProgressBar() {
-    return const Center(
-      child: CircularProgressIndicator(),
     );
   }
 
@@ -165,103 +145,52 @@ class _HomeTabPageState extends State<HomeTabPage> {
     );
   }
 
-  Widget getRow(int index) {
-    return _SongItemSection(
-      parent: this,
-      song: songs[index],
-    );
-  }
-
- void observeData() {
-  _viewModel.songStream.stream.listen((songList) {
-    setState(() {
-      songs = songList;
-    });
-  });
+ Widget getRow(int index) {
+  return ListTile(
+    leading: Image.network(
+      songs[index].image,
+      width: 50,
+      height: 50,
+      fit: BoxFit.cover,
+    ),
+    title: Text(songs[index].title),
+    subtitle: Text(songs[index].artist),
+    onTap: () {
+      // Điều hướng đến màn hình phát nhạc
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>  NowPlaying(playingSong: songs[index], songs: songs),
+        ),
+      );
+    },
+  );
 }
 
-
-  void showBottomSheet() {
-    showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          return ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Container(
-              height: 400,
-              color: Colors.green,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Text('Modal Bottom Sheet'),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close Bottom Sheet'),
-                    )
-                  ],
-                ),
-              ),
-            ),
-          );
-        });
-  }
-
-  void navigate(Song song) {
-    Navigator.push(context, CupertinoPageRoute(builder: (context) {
-      return NowPlaying(
-        songs: songs,
-        playingSong: song,
-      );
-    }));
+  void observeData() {
+    _viewModel.songStream.stream.listen((songList) {
+      setState(() {
+        songs = songList;
+      });
+    });
   }
 }
 
 class _SongItemSection extends StatelessWidget {
-  const _SongItemSection({
-    required this.parent,
-    required this.song,
-  });
-
   final _HomeTabPageState parent;
   final Song song;
 
+  const _SongItemSection({required this.parent, required this.song});
+
   @override
   Widget build(BuildContext context) {
-    return Consumer(builder: (context , _ , child)=>ListTile(
-      contentPadding: const EdgeInsets.only(
-        left: 24,
-        right: 8,
-      ),
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: FadeInImage.assetNetwork(
-          placeholder: 'assets/itunes_256.png',
-          image: song.image,
-          width: 48,
-          height: 48,
-          imageErrorBuilder: (context, error, stackTrace) {
-            return Image.asset(
-              'assets/itunes_256.png',
-              width: 48,
-              height: 48,
-            );
-          },
-        ),
-      ),
+    return ListTile(
+      leading: Image.network(song.image, width: 50, height: 50, fit: BoxFit.cover),
       title: Text(song.title),
       subtitle: Text(song.artist),
-      trailing: IconButton(
-        icon: const Icon(Icons.more_horiz),
-        onPressed: () {
-          parent.showBottomSheet();
-        },
-      ),
       onTap: () {
-        parent.navigate(song);
+        // Implement navigation to now playing or song details if needed
       },
-    )
     );
   }
 }

@@ -1,41 +1,33 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:music_app/firebase_options.dart';
 import 'package:music_app/state%20management/provider.dart';
-import 'package:provider/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
-import 'firebase_options.dart';
-import 'package:music_app/ui/home/home.dart';
-import 'package:music_app/ui/home/viewmodel.dart'; 
+import 'package:music_app/ui/home/viewmodel.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const RootApp());
-}
 
-class RootApp extends StatelessWidget {
-  const RootApp({super.key});
+  final providerStateManagement = ProviderStateManagement();
 
-  @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
+  runApp(
+    MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => providerStateManagement),
         Provider<MusicAppViewModel>(
           create: (_) => MusicAppViewModel()..loadSongs(),
           dispose: (_, viewModel) => viewModel.songStream.close(),
         ),
-        ChangeNotifierProvider(create: (context)=> ProviderStateManagement())
       ],
-      child: MaterialApp(
-        title: 'Music App',
+      child: const MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: FirebaseAuth.instance.currentUser == null
-            ? const LoginScreen()
-            : const MusicApp(),
+        title: 'Music App',
+        home: LoginScreen(),
       ),
-    );
-  }
+    ),
+  );
 }

@@ -155,19 +155,22 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                                 ),
                               ],
                             ),
-                            IconButton(
-                              onPressed: () {
-                                provider.toggleFavorite(_song);
+                            FutureBuilder<bool>(
+                              future: provider.isFavorite(_song),
+                              builder: (context, snapshot) {
+                                final isFav = snapshot.data ?? false;
+                                return IconButton(
+                                  onPressed: () {
+                                    provider.toggleFavorite(_song);
+                                  },
+                                  icon: Icon(
+                                    isFav
+                                        ? Icons.favorite
+                                        : Icons.favorite_border_outlined,
+                                    color: isFav ? Colors.red : null,
+                                  ),
+                                );
                               },
-                              icon: Icon(
-                                provider.isFavorite(_song)
-                                    ? Icons.favorite
-                                    : Icons.favorite_border_outlined,
-                                color:
-                                    provider.isFavorite(_song)
-                                        ? Colors.red
-                                        : null,
-                              ),
                             ),
                           ],
                         ),

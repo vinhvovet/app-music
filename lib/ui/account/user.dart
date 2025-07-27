@@ -35,11 +35,6 @@ class AccountTab extends StatelessWidget {
             title: const Text('Email'),
             subtitle: Text(user.email ?? 'Chưa có email'),
           ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Tên hiển thị'),
-            subtitle: Text(user.displayName ?? 'Chưa cập nhật'),
-          ),
           const SizedBox(height: 32), // <- Thay Spacer bằng SizedBox (Spacer sẽ bị xung đột với SinglechildScrollView)
           Center(
             child: ElevatedButton.icon(
