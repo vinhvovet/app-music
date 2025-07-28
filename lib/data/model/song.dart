@@ -9,8 +9,8 @@ class Song {
     required this.duration,
     this.isFavorite = false
   });
-
-  factory Song.fromJson(Map<String, dynamic> map) {
+  factory Song.fromJson(Map<String, dynamic> map) { 
+                                                   
     return Song(
       id: map['id'],
       title: map['title'],
@@ -31,8 +31,9 @@ class Song {
       'image': image,
       'duration': duration,
     };
-    }
-    // Chuyển thành map để lưu Firestore nếu cần
+  }
+
+  // Chuyển thành map để lưu Firestore nếu cần
   Map<String, dynamic> toMap() {
     return {
       'id': id,

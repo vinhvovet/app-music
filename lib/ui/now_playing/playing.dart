@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:music_app/state%20management/provider.dart';
 import 'package:provider/provider.dart';
-
+import 'package:share_plus/share_plus.dart';
 import '../../data/model/song.dart';
 import 'audio_player_manager.dart';
 
@@ -124,10 +124,12 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             IconButton(
-                              onPressed: () {},
-                              icon: const Icon(Icons.share_outlined),
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+  onPressed: () {
+    _shareSong();
+  },
+  icon: const Icon(Icons.share_outlined),
+  color: Theme.of(context).colorScheme.primary,
+),
                             Column(
                               children: [
                                 Text(
@@ -206,7 +208,16 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     _imageAnimController.dispose();
     super.dispose();
   }
+void _shareSong() {
+  final songTitle = _song.title;
+  final songArtist = _song.artist;
+  final songUrl = _song.source;
 
+  final shareContent = '🎵 bài hát "$songTitle" của $songArtist. '
+      'Nghe ngay tại đây: $songUrl';
+
+  Share.share(shareContent);
+}
   void _onSongCompleted() {
     if (_loopMode == LoopMode.one) {
       _audioPlayerManager.player.seek(Duration.zero);

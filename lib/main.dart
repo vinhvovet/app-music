@@ -8,14 +8,14 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
+  await Firebase.initializeApp( // Khởi tạo Firebase
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
   final providerStateManagement = ProviderStateManagement();
 
   runApp(
-    MultiProvider(
+    MultiProvider(// Sử dụng cung cấp đa dạng để quản lý trạng thái
       providers: [
         ChangeNotifierProvider(create: (_) => providerStateManagement),
         Provider<MusicAppViewModel>(
