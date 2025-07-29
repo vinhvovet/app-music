@@ -1,3 +1,5 @@
+import 'lyric_line.dart';
+
 class Song {
   Song({
     required this.id,
@@ -8,6 +10,7 @@ class Song {
     required this.image,
     required this.duration,
     this.lyrics,
+    this.lyricsData,
     this.isFavorite = false
   });
   factory Song.fromJson(Map<String, dynamic> map) { 
@@ -21,6 +24,9 @@ class Song {
       image: map['image'],
       duration: map['duration'],
       lyrics: map['lyrics'],
+      lyricsData: map['lyricsData'] != null 
+          ? LyricsData.fromJson(map['lyricsData']) 
+          : null,
     );
   }
   Map<String, dynamic> toJson() {
@@ -33,6 +39,7 @@ class Song {
       'image': image,
       'duration': duration,
       'lyrics': lyrics,
+      'lyricsData': lyricsData?.toJson(),
     };
   }
 
@@ -54,7 +61,8 @@ class Song {
   String source;
   String image;
   int duration;
-  String? lyrics; // Thêm trường lyrics
+  String? lyrics; // Lời bài hát dạng text thuần
+  LyricsData? lyricsData; // Lời bài hát có timestamp cho karaoke
   bool isFavorite;
 
 

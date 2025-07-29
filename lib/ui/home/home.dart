@@ -159,22 +159,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LyricsSearchPage(songs: songs),
-            ),
-          );
-        },
-        backgroundColor: const Color(0xFF3EA513),
-        child: const Icon(
-          Icons.lyrics,
-          color: Colors.white,
-          size: 28,
-        ),
-      ),
+      
     );
   }
 

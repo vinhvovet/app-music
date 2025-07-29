@@ -49,8 +49,10 @@ class _NowPlayingPageState extends State<NowPlayingPage>
 
   late PageController _pageController;
   int _currentPage = 0;
-  double _lyricsFontSize = 16.0; // Default lyrics font size
-  String _searchQuery = ''; // For lyrics search
+  
+  // Animation variables for CD rotation
+  late Stream<Duration> _positionStream;
+  bool _isAnimationRunning = false; // Track animation state
 
   @override
   void initState() {
@@ -61,7 +63,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       vsync: this,
       duration: const Duration(milliseconds: 12000),
     );
-    _playRotationAnim(); // Khởi động animation xoay ảnh
+    // Không khởi động animation ngay lập tức, chỉ khi user ấn play
 
     _audioPlayerManager = AudioPlayerManager();
     if (_audioPlayerManager.currentUrl != _song.source) {
@@ -77,13 +79,27 @@ class _NowPlayingPageState extends State<NowPlayingPage>
         _onSongCompleted();
       }
     });
+
+    // Listen to position changes for karaoke
+    _positionStream = _audioPlayerManager.player.positionStream;
+    _positionStream.listen((position) {
+      // Position stream for progress bar updates if needed
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final orientation = MediaQuery.of(context).orientation;
+    final isLandscape = orientation == Orientation.landscape;
+    
+    // Responsive sizing based on orientation
     const delta = 64;
-    final radius = (screenWidth - delta) / 2;
+    final imageSize = isLandscape 
+        ? (screenHeight * 0.6) // Use height as reference in landscape
+        : (screenWidth - delta); // Use width as reference in portrait
+    final radius = imageSize / 2;
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
@@ -95,135 +111,215 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       ),
       child: Consumer<ProviderStateManagement>(
         builder: (context, provider, child) => Scaffold(
-          body: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              const SizedBox(height: 100),
-              Text(_song.album),
-              // Indicator 2 hình chữ nhật
-              SizedBox(
-                height: 100,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(2, (index) {
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: 24,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _currentPage == index
-                            ? Colors.deepPurple
-                            : Colors.deepPurple.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    );
-                  }),
+          body: isLandscape 
+              ? _buildLandscapeLayout(context, provider, imageSize, radius)
+              : _buildPortraitLayout(context, provider, imageSize, radius),
+        ),
+      ),
+    );
+  }
+
+  // Portrait layout - vertical orientation
+  Widget _buildPortraitLayout(BuildContext context, ProviderStateManagement provider, double imageSize, double radius) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        const SizedBox(height: 100),
+        Text(_song.album),
+        // Indicator 2 hình chữ nhật
+        SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(2, (index) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: 24,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? Colors.deepPurple
+                      : Colors.deepPurple.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              // PageView giữa 2 trang
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
+              );
+            }),
+          ),
+        ),
+        // PageView giữa 2 trang
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            children: [
+              // Trang 1: UI phát nhạc
+              SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Trang 1: UI phát nhạc
-                    SingleChildScrollView(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          const SizedBox(height: 8),
-                          RotationTransition(
-                            turns: Tween(begin: 0.0, end: 1.0)
-                                .animate(_imageAnimController),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(radius),
-                              child: FadeInImage.assetNetwork(
-                                placeholder: 'assets/itunes_256.png',
-                                image: _song.image,
-                                width: screenWidth - delta,
-                                height: screenWidth - delta,
-                                imageErrorBuilder:
-                                    (context, error, stackTrace) {
-                                  return Image.asset(
-                                    'assets/itunes_256.png',
-                                    width: screenWidth - delta,
-                                    height: screenWidth - delta,
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                IconButton(
-                                  onPressed: _shareSong,
-                                  icon: const Icon(Icons.share_outlined),
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary,
-                                ),
-                                Column(
-                                  children: [
-                                    Text(_song.title,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium),
-                                    Text(_song.artist,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium),
-                                  ],
-                                ),
-                                FutureBuilder<bool>(
-                                  future: provider.isFavorite(_song),
-                                  builder: (context, snapshot) {
-                                    final isFav = snapshot.data ?? false;
-                                    return IconButton(
-                                      onPressed: () {
-                                        provider.toggleFavorite(_song);
-                                      },
-                                      icon: Icon(
-                                        isFav
-                                            ? Icons.favorite
-                                            : Icons
-                                                .favorite_border_outlined,
-                                        color: isFav ? Colors.red : null,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 32),
-                            child: _progressBar(),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 8),
-                            child: _mediaButtons(),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 8),
+                    _buildCDImage(imageSize, radius),
+                    _buildSongInfo(context, provider),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: _progressBar(),
                     ),
-                    // Trang 2: Lời bài hát
-                    _page2(context),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      child: _mediaButtons(),
+                    ),
                   ],
                 ),
               ),
+              // Trang 2: Development page
+              _page2(context),
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  // Landscape layout - horizontal orientation
+  Widget _buildLandscapeLayout(BuildContext context, ProviderStateManagement provider, double imageSize, double radius) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Left side - CD Image
+            Expanded(
+              flex: 3,
+              child: Center(
+                child: _buildCDImage(imageSize, radius),
+              ),
+            ),
+            // Right side - Controls
+            Expanded(
+              flex: 4,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Page indicators
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(2, (index) {
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: 20,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: _currentPage == index
+                              ? Colors.deepPurple
+                              : Colors.deepPurple.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 20),
+                  // Song info
+                  _buildSongInfo(context, provider),
+                  const SizedBox(height: 20),
+                  // Progress bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _progressBar(),
+                  ),
+                  const SizedBox(height: 20),
+                  // Media buttons
+                  _mediaButtons(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method to build CD image
+  Widget _buildCDImage(double imageSize, double radius) {
+    return RotationTransition(
+      turns: Tween(begin: 0.0, end: 1.0).animate(_imageAnimController),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: FadeInImage.assetNetwork(
+          placeholder: 'assets/itunes_256.png',
+          image: _song.image,
+          width: imageSize,
+          height: imageSize,
+          fit: BoxFit.cover,
+          imageErrorBuilder: (context, error, stackTrace) {
+            return Image.asset(
+              'assets/itunes_256.png',
+              width: imageSize,
+              height: imageSize,
+              fit: BoxFit.cover,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // Helper method to build song info
+  Widget _buildSongInfo(BuildContext context, ProviderStateManagement provider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          IconButton(
+            onPressed: _shareSong,
+            icon: const Icon(Icons.share_outlined),
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  _song.title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _song.artist,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          FutureBuilder<bool>(
+            future: provider.isFavorite(_song),
+            builder: (context, snapshot) {
+              final isFav = snapshot.data ?? false;
+              return IconButton(
+                onPressed: () {
+                  provider.toggleFavorite(_song);
+                },
+                icon: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border_outlined,
+                  color: isFav ? Colors.red : null,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -232,419 +328,36 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header với tên bài hát và nghệ sĩ
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.deepPurple.withOpacity(0.1), Colors.transparent],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 100),
+              Icon(
+                Icons.music_note_outlined,
+                size: 120,
+                color: Colors.grey[300],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Trang này đang được phát triển',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w500,
                 ),
-                borderRadius: BorderRadius.circular(12),
+                textAlign: TextAlign.center,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Lời bài hát',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepPurple,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _song.title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    _song.artist,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Lyrics content với styling được cải thiện
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_song.lyrics != null && _song.lyrics!.isNotEmpty) ...[
-                    // Hiển thị lời bài hát thực tế
-                    _buildLyricsContent(_song.lyrics!),
-                  ] else ...[
-                    // Hiển thị thông báo khi không có lời bài hát
-                    _buildNoLyricsContent(context),
-                  ],
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Footer với thông tin thêm
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.album, color: Colors.grey[600], size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Album: ${_song.album}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.access_time, color: Colors.grey[600], size: 20),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${(_song.duration ~/ 60)}:${(_song.duration % 60).toString().padLeft(2, '0')}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLyricsContent(String lyrics) {
-    final lines = lyrics.split('\n');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Lyrics với line numbering và better formatting
-        ...lines.asMap().entries.map((entry) {
-          final index = entry.key;
-          final line = entry.value.trim();
-          
-          if (line.isEmpty) {
-            return const SizedBox(height: 12); // Space between verses
-          }
-          
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Line number
-                Container(
-                  width: 30,
-                  child: Text(
-                    '${index + 1}',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                'Các tính năng mới sẽ sớm được thêm vào',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[400],
                 ),
-                // Lyrics line with search highlighting
-                Expanded(
-                  child: _buildHighlightedText(line, _searchQuery),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-        
-        const SizedBox(height: 20),
-        
-        // Action buttons
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildActionButton(
-              icon: Icons.search,
-              label: 'Tìm kiếm',
-              onTap: () => _showSearchDialog(context, lyrics),
-            ),
-            _buildActionButton(
-              icon: Icons.text_fields,
-              label: 'Cỡ chữ',
-              onTap: () => _showTextSizeDialog(context),
-            ),
-            _buildActionButton(
-              icon: Icons.copy,
-              label: 'Sao chép',
-              onTap: () => _copyLyrics(lyrics),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNoLyricsContent(BuildContext context) {
-    return Column(
-      children: [
-        Icon(
-          Icons.music_note_outlined,
-          size: 80,
-          color: Colors.grey[400],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Lời bài hát chưa có sẵn',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Chúng tôi đang cập nhật lời bài hát cho "${_song.title}"',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.grey[500],
-          ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton.icon(
-          onPressed: () {
-            // TODO: Implement lyrics request feature
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Tính năng này sẽ sớm được cập nhật!'),
-                duration: Duration(seconds: 2),
+                textAlign: TextAlign.center,
               ),
-            );
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Yêu cầu thêm lời'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+            ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: Colors.deepPurple),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.deepPurple,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showSearchDialog(BuildContext context, String lyrics) {
-    final TextEditingController searchController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tìm kiếm trong lời bài hát'),
-        content: TextField(
-          controller: searchController,
-          decoration: const InputDecoration(
-            hintText: 'Nhập từ khóa...',
-            prefixIcon: Icon(Icons.search),
-          ),
-          onChanged: (value) {
-            setState(() {
-              _searchQuery = value.toLowerCase();
-            });
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _searchQuery = '';
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Xóa'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHighlightedText(String text, String query) {
-    if (query.isEmpty) {
-      return Text(
-        text,
-        style: TextStyle(
-          fontSize: _lyricsFontSize,
-          height: 1.6,
-          color: Colors.black87,
-        ),
-      );
-    }
-
-    final List<TextSpan> spans = [];
-    final String lowerText = text.toLowerCase();
-    final String lowerQuery = query.toLowerCase();
-    
-    int start = 0;
-    int index = lowerText.indexOf(lowerQuery);
-    
-    while (index != -1) {
-      // Add text before match
-      if (index > start) {
-        spans.add(TextSpan(
-          text: text.substring(start, index),
-          style: TextStyle(
-            fontSize: _lyricsFontSize,
-            height: 1.6,
-            color: Colors.black87,
-          ),
-        ));
-      }
-      
-      // Add highlighted match
-      spans.add(TextSpan(
-        text: text.substring(index, index + query.length),
-        style: TextStyle(
-          fontSize: _lyricsFontSize,
-          height: 1.6,
-          color: Colors.white,
-          backgroundColor: Colors.deepPurple,
-          fontWeight: FontWeight.bold,
-        ),
-      ));
-      
-      start = index + query.length;
-      index = lowerText.indexOf(lowerQuery, start);
-    }
-    
-    // Add remaining text
-    if (start < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(start),
-        style: TextStyle(
-          fontSize: _lyricsFontSize,
-          height: 1.6,
-          color: Colors.black87,
-        ),
-      ));
-    }
-    
-    return RichText(
-      text: TextSpan(children: spans),
-    );
-  }
-
-  void _showTextSizeDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cỡ chữ lời bài hát'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Nhỏ'),
-              trailing: _lyricsFontSize == 14.0 
-                ? const Icon(Icons.check, color: Colors.deepPurple) 
-                : null,
-              onTap: () {
-                setState(() => _lyricsFontSize = 14.0);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('Vừa'),
-              trailing: _lyricsFontSize == 16.0 
-                ? const Icon(Icons.check, color: Colors.deepPurple) 
-                : null,
-              onTap: () {
-                setState(() => _lyricsFontSize = 16.0);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('Lớn'),
-              trailing: _lyricsFontSize == 18.0 
-                ? const Icon(Icons.check, color: Colors.deepPurple) 
-                : null,
-              onTap: () {
-                setState(() => _lyricsFontSize = 18.0);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('Rất lớn'),
-              trailing: _lyricsFontSize == 20.0 
-                ? const Icon(Icons.check, color: Colors.deepPurple) 
-                : null,
-              onTap: () {
-                setState(() => _lyricsFontSize = 20.0);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _copyLyrics(String lyrics) {
-    Clipboard.setData(ClipboardData(text: lyrics));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đã sao chép lời bài hát!'),
-        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -692,6 +405,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
 
   void _resetRotationAnim() {
     _currentAnimationPosition = 0.0;
+    _isAnimationRunning = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _imageAnimController.value = _currentAnimationPosition;
@@ -762,7 +476,9 @@ class _NowPlayingPageState extends State<NowPlayingPage>
         final playing = playState?.playing;
         if (processingState == ProcessingState.loading ||
             processingState == ProcessingState.buffering) {
-          _pauseRotationAnim();
+          if (_isAnimationRunning) {
+            _pauseRotationAnim();
+          }
           return Container(
             margin: const EdgeInsets.all(8),
             width: 48,
@@ -770,6 +486,9 @@ class _NowPlayingPageState extends State<NowPlayingPage>
             child: const CircularProgressIndicator(),
           );
         } else if (playing != true) {
+          if (_isAnimationRunning) {
+            _pauseRotationAnim();
+          }
           return MediaButtonControl(
             function: () {
               _audioPlayerManager.player.play();
@@ -779,11 +498,12 @@ class _NowPlayingPageState extends State<NowPlayingPage>
             size: 48,
           );
         } else if (processingState != ProcessingState.completed) {
-          _playRotationAnim();
+          if (!_isAnimationRunning) {
+            _playRotationAnim();
+          }
           return MediaButtonControl(
             function: () {
               _audioPlayerManager.player.pause();
-              _pauseRotationAnim();
             },
             icon: Icons.pause,
             color: null,
@@ -881,19 +601,28 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   // }
 
   void _playRotationAnim() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _imageAnimController.forward(from: _currentAnimationPosition);
-      _imageAnimController.repeat();
-    });
+    if (!_isAnimationRunning) {
+      _isAnimationRunning = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _imageAnimController.forward(from: _currentAnimationPosition);
+          _imageAnimController.repeat();
+        }
+      });
+    }
   }
 
   void _pauseRotationAnim() {
-    _stopRotationAnim();
-    _currentAnimationPosition = _imageAnimController.value;
+    if (_isAnimationRunning) {
+      _stopRotationAnim();
+      _currentAnimationPosition = _imageAnimController.value;
+      _isAnimationRunning = false;
+    }
   }
 
   void _stopRotationAnim() {
     _imageAnimController.stop();
+    _isAnimationRunning = false;
   }
 
 }
