@@ -21,10 +21,10 @@ void _logout() async {
   final confirm = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      backgroundColor: const Color(0xFF2B3147),
-      title: const Text('Đăng xuất', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.white,
+      title: const Text('Đăng xuất', style: TextStyle(color: Colors.black)),
       content: const Text('Bạn có chắc chắn muốn đăng xuất?',
-          style: TextStyle(color: Colors.white70)),
+          style: TextStyle(color: Colors.black)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
@@ -57,28 +57,28 @@ void _logout() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF21293E),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: const Text('Cài đặt', style: TextStyle(color: Colors.white)),
+        title: const Text('Cài đặt', style: TextStyle(color: Colors.black)),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: ListView(
         children: [
           ListTile(
-            leading: const Icon(Icons.person, color: Colors.white),
-            title: const Text('Tài khoản', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.person, color: Colors.black),
+            title: const Text('Tài khoản', style: TextStyle(color: Colors.black)),
             subtitle: const Text('Xem và chỉnh sửa thông tin cá nhân',
-                style: TextStyle(color: Colors.white70)),
+                style: TextStyle(color: Colors.black54)),
             onTap: () {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.info, color: Colors.white),
-            title: const Text('Thông tin ứng dụng', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.info, color: Colors.black),
+            title: const Text('Thông tin ứng dụng', style: TextStyle(color: Colors.black)),
             subtitle: const Text('Phiên bản 1.0.0',
-                style: TextStyle(color: Colors.white70)),
+                style: TextStyle(color: Colors.black54)),
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/home/home.dart';
 import 'package:music_app/ui/auth_form/register_screen.dart';
@@ -46,6 +47,46 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+Future<void> signInWithGoogle() async {
+  setState(() {
+    _error = null;
+    _loading = true;
+  });
+
+  try {
+    // Trigger the authentication flow
+    final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
+
+    // Obtain the auth details from the request
+    final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+    // Create a new credential
+    final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
+
+    // Once signed in, sign in with Firebase
+    await FirebaseAuth.instance.signInWithCredential(credential);
+
+    if (context.mounted) {
+      final provider = context.read<ProviderStateManagement>();
+      await provider.loadFavorites(); // Load favorites from local storage
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MusicApp()),
+      );
+    }
+  } on FirebaseAuthException catch (e) {
+    setState(() => _error = e.message);
+  } on GoogleSignInException catch (e) {
+    setState(() => _error = 'Google Sign In Error: ${e.toString()}');
+  } catch (e) {
+    setState(() => _error = 'An error occurred: $e');
+  } finally {
+    setState(() => _loading = false);
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
      final provider = context.read<ProviderStateManagement>();
@@ -61,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Icon(Icons.music_note, size: 80, color: Colors.deepPurple),
               const SizedBox(height: 20),
               const Text(
-                'Để nghe nhạc',
+                ' nghe nhạc',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -141,6 +182,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(color: Colors.black),
                 ),
               ),
+              ElevatedButton(
+                onPressed: () {
+                 signInWithGoogle();
+                    
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Text('Đăng nhập bằng Google', style: TextStyle(color: Colors.black)),
+                    SizedBox(width: 8),
+                    Image(
+                      image: AssetImage('assets/image.png'),
+                      height: 24,
+                      width: 20,
+                    ),
+                  ],
+                ),
+              )
+
             ],
           ),
         ),

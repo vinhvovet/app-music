@@ -7,7 +7,8 @@
       "artist": "ERIK",
       "source": "https://thantrieu.com/resources/music/1121429554.mp3",
       "image": "https://thantrieu.com/resources/arts/1121429554.webp",
-      "duration": 224
+      "duration": 224,
+      "lyrics": "Anh biết em đang buồn vì anh\nNhững lời yêu thương giờ đây chỉ còn trong mơ\nEm hãy về đây với anh\nĐể anh được ôm em thật chặt một lần nữa\n\nChạy về khóc với anh\nKhi em thấy cô đơn\nAnh sẽ ở đây chờ em\nDù có bao nhiêu khó khăn\n\nChạy về khóc với anh\nKhi trái tim em đau\nAnh sẽ lau khô nước mắt\nVà nói rằng anh yêu em mãi mãi"
     },
     {
       "id": "1130295694",
@@ -16,7 +17,18 @@
       "artist": "Phúc XP ft Freak D",
       "source": "https://thantrieu.com/resources/music/1130295694.mp3",
       "image": "https://thantrieu.com/resources/arts/1130295694.webp",
-      "duration": 302
+      "duration": 302,
+      "lyrics": "Như anh đã thấy em\nTrong giấc mơ đêm qua\nEm đẹp như thiên thần\nVà anh đã yêu ngay từ cái nhìn đầu tiên\n\nNhững ngày tháng trôi qua\nAnh vẫn nhớ em hoài\nDù biết rằng tình yêu này\nChỉ là một giấc mơ xa vời\n\nNhưng anh vẫn tin rằng\nMột ngày nào đó em sẽ về\nVà tình yêu của đôi ta\nSẽ không bao giờ phai nhạt"
+    },
+    {
+      "id": "1073419268",
+      "title": "Beautiful In White",
+      "album": "Wild Angel's Collection",
+      "artist": "Shayne Ward",
+      "source": "https://thantrieu.com/resources/music/1073419268.mp3",
+      "image": "https://thantrieu.com/resources/arts/1073419268.webp",
+      "duration": 232,
+      "lyrics": "Not sure if you know this\nBut when we first met\nI got so nervous I couldn't speak\nIn that very moment\nI found the one and\nMy life had found its missing piece\n\nSo as long as I live I love you\nWill heaven hold you\nYou look so beautiful in white\nAnd from now til my very last breath\nThis day I'll cherish\nYou look so beautiful in white\nTonight"
     },
     {
       "id": "1130295695",
@@ -26,105 +38,6 @@
       "source": "https://thantrieu.com/resources/music/1130295695.mp3",
       "image": "https://thantrieu.com/resources/arts/1130295695.webp",
       "duration": 224
-    },
-    {
-      "id": "1130295696",
-      "title": "Hoa Nở không Màu",
-      "album": "Đồng Dao Show",
-      "artist": "Hoài Lâm",
-      "source": "https://thantrieu.com/resources/music/1130295696.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295696.webp",
-      "duration": 257
-    },
-    {
-      "id": "1130295697",
-      "title": "Đế Vương",
-      "album": "Ciray Remix-Cover",
-      "artist": "Đình Dũng",
-      "source": "https://thantrieu.com/resources/music/1130295697.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295697.webp",
-      "duration": 199
-    },
-    {
-      "id": "1130295698",
-      "title": "Thì Thôi",
-      "album": "Remix-Đại Mèo",
-      "artist": "Nal ft TVk ft 93NEW-G",
-      "source": "https://thantrieu.com/resources/music/1130295698.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295698.webp",
-      "duration": 287
-    },
-    {
-      "id": "1130295699",
-      "title": "Trách Duyên Trách Phận",
-      "album": "Unknown",
-      "artist": "Đỗ Thành Duy",
-      "source": "https://thantrieu.com/resources/music/1130295699.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295699.webp",
-      "duration": 284
-    },
-    {
-      "id": "1130295700",
-      "title": "Cưới Hông Chốt Nha",
-      "album": "NH4T",
-      "artist": "Út Nhị Mino",
-      "source": "https://thantrieu.com/resources/music/1130295700.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295700.webp",
-      "duration": 257
-    },
-    {
-      "id": "1130295701",
-      "title": "Em Nên Dừng Lại",
-      "album": "Em Nên Dừng Lại(Single)",
-      "artist": "Khang Việt",
-      "source": "https://thantrieu.com/resources/music/1130295701.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295701.webp",
-      "duration": 368
-    },
-    {
-      "id": "1130295702",
-      "title": "Người Lạ Thoáng Qua",
-      "album": "Người Lạ Thoáng Qua(Single)",
-      "artist": "Đinh Tùng Huy",
-      "source": "https://thantrieu.com/resources/music/1130295702.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295702.webp",
-      "duration": 285
-    },
-    {
-      "id": "1130295703",
-      "title": "Ân Tình Sang Trang",
-      "album": "Ân Tình Sang Trang(Single)",
-      "artist": "Châu Khải Phong",
-      "source": "https://thantrieu.com/resources/music/1130295703.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295703.webp",
-      "duration": 320
-    },
-    {
-      "id": "1130295704",
-      "title": "Pháo Hồng",
-      "album": "Pháo Hồng(Single)",
-      "artist": "Đạt Long Vinh",
-      "source": "https://thantrieu.com/resources/music/1130295704.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295704.webp",
-      "duration": 235
-    },
-    {
-      "id": "1130295705",
-      "title": "Ai Chung Tình Được Mãi",
-      "album": "Ai Chung Tình Được Mãi(Single)",
-      "artist": "Đinh Tùng Huy",
-      "source": "https://thantrieu.com/resources/music/1130295705.mp3",
-      "image": "https://thantrieu.com/resources/arts/1130295705.webp",
-      "duration": 335
-    },
-    {
-      "id": "1073419268",
-      "title": "Beautiful In White",
-      "album": "Wild Angel's Collection",
-      "artist": "Shayne Ward",
-      "source": "https://thantrieu.com/resources/music/1073419268.mp3",
-      "image": "https://thantrieu.com/resources/arts/1073419268.webp",
-      "duration": 232
     },
     {
       "id": "1073850016",

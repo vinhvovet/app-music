@@ -10,26 +10,61 @@ class ProviderStateManagement extends ChangeNotifier {
 
   /// Tải danh sách yêu thích từ Firestore
   Future<void> loadFavorites() async {
-    _favoriteSongs.clear();
-    _favoriteSongs.addAll(await _favoriteService.getFavorites());
-    notifyListeners();
+    // Kiểm tra xem user có đăng nhập không trước khi load favorites
+    if (!_favoriteService.isUserAuthenticated) {
+      _favoriteSongs.clear();
+      notifyListeners();
+      return;
+    }
+    
+    try {
+      _favoriteSongs.clear();
+      _favoriteSongs.addAll(await _favoriteService.getFavorites());
+      notifyListeners();
+    } catch (e) {
+      // Log error or handle gracefully
+      print('Error loading favorites: $e');
+      _favoriteSongs.clear();
+      notifyListeners();
+    }
   }
 
   /// Kiểm tra một bài hát có đang được yêu thích không
   Future<bool> isFavorite(Song song) async {
-    return await _favoriteService.isFavorite(song.id);
+    if (!_favoriteService.isUserAuthenticated) {
+      return false;
+    }
+    try {
+      return await _favoriteService.isFavorite(song.id);
+    } catch (e) {
+      print('Error checking favorite: $e');
+      return false;
+    }
   }
 
   /// Thêm hoặc gỡ bài hát khỏi danh sách yêu thích
   Future<void> toggleFavorite(Song song) async {
-    final isFav = await _favoriteService.isFavorite(song.id);
-    if (isFav) {
-      await _favoriteService.removeFavorite(song.id);
-      _favoriteSongs.removeWhere((s) => s.id == song.id);
-    } else {
-      await _favoriteService.addFavorite(song);
-      _favoriteSongs.add(song);
+    if (!_favoriteService.isUserAuthenticated) {
+      return;
     }
-    notifyListeners();
+    
+    try {
+      final isFav = await _favoriteService.isFavorite(song.id);
+      if (isFav) {
+        await _favoriteService.removeFavorite(song.id);
+        _favoriteSongs.removeWhere((s) => s.id == song.id);
+      } else {
+        await _favoriteService.addFavorite(song);
+        _favoriteSongs.add(song);
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error toggling favorite: $e');
+    }
+  }
+
+  /// Khởi tạo lại sau khi user đăng nhập
+  Future<void> initializeAfterAuth() async {
+    await loadFavorites();
   }
 }

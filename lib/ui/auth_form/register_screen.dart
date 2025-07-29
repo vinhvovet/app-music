@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:music_app/ui/home/home.dart'; // hoặc MusicApp nếu bạn dùng tên này
+import 'package:provider/provider.dart';
+import '../../state management/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -38,6 +40,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (context.mounted) {
+        // Khởi tạo provider sau khi đăng ký thành công
+        final provider = context.read<ProviderStateManagement>();
+        await provider.initializeAfterAuth();
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MusicApp()),

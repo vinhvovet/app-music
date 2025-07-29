@@ -6,6 +6,7 @@ import 'package:music_app/ui/home/viewmodel.dart';
 import 'package:music_app/ui/now_playing/playing.dart';
 import 'package:music_app/ui/settings/settings.dart';
 import 'package:music_app/ui/account/user.dart';
+import '../lyrics_recognition/lyrics_search_page.dart';
 import '../../data/model/song.dart';
 
 class MusicApp extends StatelessWidget {
@@ -45,7 +46,6 @@ class _MusicHomePageState extends State<MusicHomePage> {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Nghe nhạc'),
-        backgroundColor: Color(0xFF21293E),
       ),
       child: CupertinoTabScaffold(
         tabBar: CupertinoTabBar(
@@ -98,6 +98,41 @@ class _HomeTabPageState extends State<HomeTabPage> {
     return Scaffold(
       body: Column(
         children: [
+          // Header với tiêu đề "Nghe nhạc"
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF3EA513).withOpacity(0.1),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nghe nhạc',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF3EA513),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Khám phá và thưởng thức âm nhạc',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Thanh tìm kiếm theo tên bài hát và tác giả
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: TextField(
@@ -123,6 +158,22 @@ class _HomeTabPageState extends State<HomeTabPage> {
                 : getListView(),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LyricsSearchPage(songs: songs),
+            ),
+          );
+        },
+        backgroundColor: const Color(0xFF3EA513),
+        child: const Icon(
+          Icons.lyrics,
+          color: Colors.white,
+          size: 28,
+        ),
       ),
     );
   }
@@ -167,30 +218,138 @@ class _HomeTabPageState extends State<HomeTabPage> {
   );
 }
 
+  void _showLyricsSearchDialog(BuildContext context) {
+    TextEditingController lyricsController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Tìm kiếm theo lời bài hát'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: lyricsController,
+                decoration: const InputDecoration(
+                  hintText: 'Nhập lời bài hát...',
+                  prefixIcon: Icon(Icons.lyrics),
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Nhập một đoạn lời bài hát để tìm kiếm',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (lyricsController.text.trim().isNotEmpty) {
+                  Navigator.of(context).pop();
+                  _searchByLyrics(lyricsController.text.trim());
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3EA513),
+              ),
+              child: const Text('Tìm kiếm', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _searchByLyrics(String lyrics) {
+    // Tìm kiếm bài hát dựa trên lời bài hát
+    List<Song> foundSongs = [];
+    for (Song song in songs) {
+      if (song.lyrics != null && 
+          song.lyrics!.toLowerCase().contains(lyrics.toLowerCase())) {
+        foundSongs.add(song);
+      }
+    }
+
+    if (foundSongs.isNotEmpty) {
+      // Hiển thị kết quả tìm kiếm
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Tìm thấy ${foundSongs.length} bài hát'),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 300,
+              child: ListView.builder(
+                itemCount: foundSongs.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    leading: Image.asset(
+                      foundSongs[index].image,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                    ),
+                    title: Text(foundSongs[index].title),
+                    subtitle: Text(foundSongs[index].artist),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NowPlaying(
+                            playingSong: foundSongs[index], 
+                            songs: songs
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Đóng'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // Không tìm thấy bài hát nào
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Không tìm thấy'),
+            content: const Text('Không tìm thấy bài hát nào có lời tương ứng.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
   void observeData() {
     _viewModel.songStream.stream.listen((songList) {
       setState(() {
         songs = songList;
       });
     });
-  }
-}
-
-class _SongItemSection extends StatelessWidget {
-  final _HomeTabPageState parent;
-  final Song song;
-
-  const _SongItemSection({required this.parent, required this.song});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Image.network(song.image, width: 50, height: 50, fit: BoxFit.cover),
-      title: Text(song.title),
-      subtitle: Text(song.artist),
-      onTap: () {
-        // Implement navigation to now playing or song details if needed
-      },
-    );
   }
 }

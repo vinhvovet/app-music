@@ -7,6 +7,7 @@ class Song {
     required this.source,
     required this.image,
     required this.duration,
+    this.lyrics,
     this.isFavorite = false
   });
   factory Song.fromJson(Map<String, dynamic> map) { 
@@ -19,6 +20,7 @@ class Song {
       source: map['source'],
       image: map['image'],
       duration: map['duration'],
+      lyrics: map['lyrics'],
     );
   }
   Map<String, dynamic> toJson() {
@@ -30,6 +32,7 @@ class Song {
       'source': source,
       'image': image,
       'duration': duration,
+      'lyrics': lyrics,
     };
   }
 
@@ -40,6 +43,7 @@ class Song {
       'title': title,
       'artist': artist,
       'album': album,
+      'lyrics': lyrics,
     };
   }
 
@@ -50,6 +54,7 @@ class Song {
   String source;
   String image;
   int duration;
+  String? lyrics; // Thêm trường lyrics
   bool isFavorite;
 
 
