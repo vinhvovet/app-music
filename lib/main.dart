@@ -1,39 +1,60 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:music_app/firebase_options.dart';
 import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
 import 'package:music_app/ui/home/viewmodel.dart';
+import 'package:music_app/ui/youtube_music_test_page.dart';
 import 'package:provider/provider.dart';
+import 'package:music_app/startup_performance.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp( // Khởi tạo Firebase
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  
+  // Sử dụng StartupPerformance để tối ưu khởi tạo
+  await StartupPerformance.initializeServices();
 
-  // Initialize Google Sign In with serverClientId
-  await GoogleSignIn.instance.initialize(
-    serverClientId: '857871605367-kaubjl12u1h99mgj3v566h7gn41p1h25.apps.googleusercontent.com',
-  );
+  runApp(const MusicApp());
+}
 
-  final providerStateManagement = ProviderStateManagement();
+class MusicApp extends StatelessWidget {
+  const MusicApp({super.key});
 
-  runApp(
-    MultiProvider(// Sử dụng cung cấp đa dạng để quản lý trạng thái
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => providerStateManagement),
+        ChangeNotifierProvider(
+          create: (_) => ProviderStateManagement(),
+          lazy: false, // Load immediately for better UX
+        ),
         Provider<MusicAppViewModel>(
-          create: (_) => MusicAppViewModel()..loadSongs(),
-          dispose: (_, viewModel) => viewModel.songStream.close(),
+          create: (_) => MusicAppViewModel(), // Remove immediate loadSongs() call
+          dispose: (_, viewModel) => viewModel.dispose(), // Use proper dispose method
+          lazy: true, // Load only when needed to reduce startup time
         ),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Music App',
-        home: LoginScreen(),
+        routes: {
+          '/': (context) => const LoginScreen(),
+          '/test-api': (context) => const YouTubeMusicTestPage(),
+        },
+        initialRoute: '/',
+        // Performance optimizations
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.noScaling, // Prevent text scaling issues
+            ),
+            child: child!,
+          );
+        },
+        // Reduce unnecessary rebuilds
+        theme: ThemeData(
+          useMaterial3: true,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

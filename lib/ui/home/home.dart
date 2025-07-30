@@ -1,13 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import 'package:music_app/ui/discovery/discovery.dart';
 import 'package:music_app/ui/home/viewmodel.dart';
-import 'package:music_app/ui/now_playing/playing.dart';
 import 'package:music_app/ui/settings/settings.dart';
 import 'package:music_app/ui/account/user.dart';
-import '../lyrics_recognition/lyrics_search_page.dart';
+import 'package:music_app/ui/now_playing/playing.dart';
+import '../../data/music_models.dart';
 import '../../data/model/song.dart';
+import '../../state management/provider.dart';
 
 class MusicApp extends StatelessWidget {
   const MusicApp({super.key});
@@ -15,7 +16,7 @@ class MusicApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Nghe nhạc ',
+      title: 'Music Player ',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
@@ -44,20 +45,41 @@ class _MusicHomePageState extends State<MusicHomePage> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Nghe nhạc'),
+      navigationBar: CupertinoNavigationBar(
+        heroTag: "main_nav",
+        transitionBetweenRoutes: false,
+        middle: const Text('Music Player'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Icon(CupertinoIcons.lab_flask),
+          onPressed: () {
+            Navigator.pushNamed(context, '/test-api');
+          },
+        ),
       ),
       child: CupertinoTabScaffold(
         tabBar: CupertinoTabBar(
-          backgroundColor: Theme.of(context).colorScheme.onInverseSurface,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chính'),
-            BottomNavigationBarItem(icon: Icon(Icons.album), label: 'Yêu thích'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Tài khoản'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Cài đặt'),
+          backgroundColor: CupertinoColors.systemBackground,
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.heart),
+              label: 'Favorites',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.person),
+              label: 'Account',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.settings),
+              label: 'Settings',
+            ),
           ],
         ),
-        tabBuilder: (BuildContext context, int index) {
+        tabBuilder: (context, index) {
           return _tabs[index];
         },
       ),
@@ -65,276 +87,551 @@ class _MusicHomePageState extends State<MusicHomePage> {
   }
 }
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const HomeTabPage();
-  }
+  State<HomeTab> createState() => _HomeTabState();
 }
 
-class HomeTabPage extends StatefulWidget {
-  const HomeTabPage({super.key});
+class _HomeTabState extends State<HomeTab> {
+  MusicAppViewModel? _musicAppViewModel;
+  List<MusicTrack> songs = [];
+  bool isLoading = false;
+  bool _isPlayingMusic = false;
+  final TextEditingController _searchController = TextEditingController();
 
-  @override
-  State<HomeTabPage> createState() => _HomeTabPageState();
-}
-
-class _HomeTabPageState extends State<HomeTabPage> {
-  List<Song> songs = [];
-  late MusicAppViewModel _viewModel;
-
-  @override
+  @override  
   void initState() {
     super.initState();
-    _viewModel = MusicAppViewModel();
-    _viewModel.loadSongs();
-    observeData();
+    
+    // Get viewModel from Provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _musicAppViewModel = Provider.of<MusicAppViewModel>(context, listen: false);
+      
+      // Listen to songs stream
+      _musicAppViewModel!.songStream.stream.listen((event) {
+        print('HomeTab: Received ${event.length} songs'); // Debug
+        if (mounted) {
+          setState(() {
+            songs = event;
+          });
+        }
+      });
+      
+      // Listen to loading stream
+      _musicAppViewModel!.loadingStream.stream.listen((loading) {
+        print('HomeTab: Loading state: $loading'); // Debug
+        if (mounted) {
+          setState(() {
+            isLoading = loading;
+          });
+        }
+      });
+      
+      // Load songs after setting up listeners
+      print('HomeTab: About to load songs...');
+      _musicAppViewModel!.loadSongs();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _musicAppViewModel?.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          // Header với tiêu đề "Nghe nhạc"
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF3EA513).withOpacity(0.1),
-                  Colors.transparent,
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Nghe nhạc',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF3EA513),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Khám phá và thưởng thức âm nhạc',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Thanh tìm kiếm theo tên bài hát và tác giả
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: TextField(
-              onChanged: (value) {
-                _viewModel.searchByKeyword(value);
-              },
-              decoration: InputDecoration(
-                hintText: 'Tìm kiếm theo nhạc sĩ, bài hát...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: songs.isEmpty
-                ? const Text("Không tìm thấy bài hát nào.")
-                : getListView(),
-          ),
-        ],
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        heroTag: "home_tab",
+        transitionBetweenRoutes: false,
+        middle: const Text('Music Library'),
       ),
-      
-    );
-  }
-
-  ListView getListView() {
-    return ListView.separated(
-      itemBuilder: (context, position) {
-        return getRow(position);
-      },
-      separatorBuilder: (context, index) {
-        return const Divider(
-          color: Colors.grey,
-          thickness: 1,
-          indent: 24,
-          endIndent: 24,
-        );
-      },
-      itemCount: songs.length,
-      shrinkWrap: true,
-    );
-  }
-
- Widget getRow(int index) {
-  return ListTile(
-    leading: Image.network(
-      songs[index].image,
-      width: 50,
-      height: 50,
-      fit: BoxFit.cover,
-    ),
-    title: Text(songs[index].title),
-    subtitle: Text(songs[index].artist),
-    onTap: () {
-      // Điều hướng đến màn hình phát nhạc
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>  NowPlaying(playingSong: songs[index], songs: songs),
-        ),
-      );
-    },
-  );
-}
-
-  void _showLyricsSearchDialog(BuildContext context) {
-    TextEditingController lyricsController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Tìm kiếm theo lời bài hát'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: lyricsController,
-                decoration: const InputDecoration(
-                  hintText: 'Nhập lời bài hát...',
-                  prefixIcon: Icon(Icons.lyrics),
-                  border: OutlineInputBorder(),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Search TextField
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: CupertinoTextField(
+                controller: _searchController,
+                placeholder: 'Search songs, artists...',
+                prefix: const Padding(
+                  padding: EdgeInsets.only(left: 8.0),
+                  child: Icon(CupertinoIcons.search, color: CupertinoColors.systemGrey),
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Nhập một đoạn lời bài hát để tìm kiếm',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (lyricsController.text.trim().isNotEmpty) {
-                  Navigator.of(context).pop();
-                  _searchByLyrics(lyricsController.text.trim());
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3EA513),
-              ),
-              child: const Text('Tìm kiếm', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _searchByLyrics(String lyrics) {
-    // Tìm kiếm bài hát dựa trên lời bài hát
-    List<Song> foundSongs = [];
-    for (Song song in songs) {
-      if (song.lyrics != null && 
-          song.lyrics!.toLowerCase().contains(lyrics.toLowerCase())) {
-        foundSongs.add(song);
-      }
-    }
-
-    if (foundSongs.isNotEmpty) {
-      // Hiển thị kết quả tìm kiếm
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Tìm thấy ${foundSongs.length} bài hát'),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 300,
-              child: ListView.builder(
-                itemCount: foundSongs.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    leading: Image.asset(
-                      foundSongs[index].image,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                    ),
-                    title: Text(foundSongs[index].title),
-                    subtitle: Text(foundSongs[index].artist),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => NowPlaying(
-                            playingSong: foundSongs[index], 
-                            songs: songs
-                          ),
-                        ),
-                      );
-                    },
-                  );
+                suffix: _searchController.text.isNotEmpty
+                    ? CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minSize: 0,
+                        child: const Icon(CupertinoIcons.clear, size: 16),
+                        onPressed: () {
+                          _searchController.clear();
+                          _musicAppViewModel?.searchByKeyword('');
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                onChanged: (value) {
+                  _musicAppViewModel?.searchByKeyword(value);
+                  if (mounted) {
+                    setState(() {}); // Update suffix visibility
+                  }
                 },
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Đóng'),
+            // Songs List
+            Expanded(
+              child: songs.isEmpty && isLoading
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CupertinoActivityIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading music from YouTube Music...'),
+                  ],
+                ),
+              )
+            : songs.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.music_off, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text('No songs found'),
+                        SizedBox(height: 8),
+                        Text('Try searching for different songs', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: songs.length,
+                    itemBuilder: (context, index) {
+                      final track = songs[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        elevation: 2,
+                        child: ListTile(
+                          leading: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.grey.shade200,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: track.thumbnail != null && track.thumbnail!.isNotEmpty
+                                  ? Image.network(
+                                      track.thumbnail!,
+                                      width: 56,
+                                      height: 56,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(
+                                        CupertinoIcons.music_note_2,
+                                        size: 32,
+                                        color: Colors.grey,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      CupertinoIcons.music_note_2,
+                                      size: 32,
+                                      color: Colors.grey,
+                                    ),
+                            ),
+                          ),
+                          title: Text(
+                            track.title.isNotEmpty ? track.title : 'Untitled Song',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                track.artist?.isNotEmpty == true 
+                                    ? track.artist! 
+                                    : 'Various Artists',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (track.duration != null)
+                                Text(
+                                  _formatDuration(track.duration!),
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Consumer<ProviderStateManagement>(
+                                  builder: (context, provider, child) {
+                                    return FutureBuilder<bool>(
+                                      future: provider.isFavoriteMusicTrack(track),
+                                      builder: (context, snapshot) {
+                                        final isFavorite = snapshot.data ?? (track.isFavorite ?? false);
+                                        return Icon(
+                                          isFavorite
+                                              ? CupertinoIcons.heart_fill
+                                              : CupertinoIcons.heart,
+                                          color: isFavorite
+                                              ? CupertinoColors.systemRed
+                                              : Colors.grey,
+                                          size: 20,
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                                onPressed: () async {
+                                  final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+                                  await provider.toggleFavoriteMusicTrack(track);
+                                },
+                              ),
+                              Icon(
+                                CupertinoIcons.play_circle_fill,
+                                color: Theme.of(context).primaryColor,
+                                size: 28,
+                              ),
+                            ],
+                          ),
+                          onTap: () => _playMusic(track),
+                        ),
+                      );
+                    },
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _playMusic(MusicTrack track) async {
+    if (!mounted) return;
+
+    // Prevent multiple calls
+    if (_isPlayingMusic) return;
+    _isPlayingMusic = true;
+
+    try {
+      // Get stream URL (removed loading dialog for better performance)
+      final streamUrl = await _musicAppViewModel?.getStreamUrl(track.videoId);
+      
+      
+      if (streamUrl != null) {
+        // Navigate to now playing screen
+        if (mounted) {
+          Navigator.push(
+            context,
+            CupertinoPageRoute(
+              builder: (context) => NowPlaying(
+                playingSong: track,
+                songs: songs,
+                streamUrl: streamUrl,
               ),
-            ],
+            ),
           );
-        },
-      );
-    } else {
-      // Không tìm thấy bài hát nào
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Không tìm thấy'),
-            content: const Text('Không tìm thấy bài hát nào có lời tương ứng.'),
+        }
+      } else {
+        if (mounted) {
+          showCupertinoDialog(
+            context: context,
+            builder: (context) => CupertinoAlertDialog(
+              title: const Text('Error'),
+              content: Text('❌ Cannot play: ${track.title}'),
+              actions: [
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('Error'),
+            content: Text('Error: $e'),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+              CupertinoDialogAction(
                 child: const Text('OK'),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
-          );
-        },
+          ),
+        );
+      }
+    } finally {
+      _isPlayingMusic = false;
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+}
+
+class ListFavorite extends StatelessWidget {
+  const ListFavorite({super.key});
+
+  // Converter function to convert Song to MusicTrack
+  MusicTrack _convertSongToMusicTrack(Song song) {
+    return MusicTrack(
+      id: song.id,
+      videoId: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      thumbnail: song.image,
+      url: song.source,
+      duration: Duration(seconds: song.duration),
+      isFavorite: song.isFavorite,
+      extras: {
+        'originalSong': song,
+        'source': song.source,
+        'lyrics': song.lyrics,
+        'lyricsData': song.lyricsData,
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        heroTag: "favorites_tab",
+        transitionBetweenRoutes: false,
+        middle: Text('Favorite Songs'),
+      ),
+      child: SafeArea(
+        child: Consumer<ProviderStateManagement>(
+          builder: (context, provider, child) {
+            final favSongs = provider.favoriteSongs;
+            
+            // Debug log để kiểm tra
+            print('[ListFavorite] DEBUG: Number of favorite songs: ${favSongs.length}');
+            if (favSongs.isNotEmpty) {
+              print('[ListFavorite] DEBUG: First favorite song: ${favSongs.first.title}');
+            }
+            
+            if (provider.isLoading) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CupertinoActivityIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading favorites...'),
+                  ],
+                ),
+              );
+            }
+            
+            if (favSongs.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(CupertinoIcons.heart, size: 64, color: Colors.grey),
+                    SizedBox(height: 16),
+                    Text('No favorite songs yet', style: TextStyle(fontSize: 18)),
+                    SizedBox(height: 8),
+                    Text('Add songs to favorites from the Home tab', 
+                         style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              );
+            }
+            
+            return ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: favSongs.length,
+              itemBuilder: (context, index) {
+                final song = favSongs[index];
+                final track = _convertSongToMusicTrack(song);
+                
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  elevation: 2,
+                  child: ListTile(
+                    leading: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey.shade200,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: track.thumbnail != null && track.thumbnail!.isNotEmpty
+                            ? Image.network(
+                                track.thumbnail!,
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                  CupertinoIcons.music_note_2,
+                                  size: 32,
+                                  color: Colors.grey,
+                                ),
+                              )
+                            : const Icon(
+                                CupertinoIcons.music_note_2,
+                                size: 32,
+                                color: Colors.grey,
+                              ),
+                      ),
+                    ),
+                    title: Text(
+                      track.title.isNotEmpty ? track.title : 'Untitled Song',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          track.artist?.isNotEmpty == true 
+                              ? track.artist! 
+                              : 'Various Artists',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (track.duration != null)
+                          Text(
+                            _formatDuration(track.duration!),
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            CupertinoIcons.heart_fill,
+                            color: CupertinoColors.systemRed,
+                            size: 20,
+                          ),
+                          onPressed: () async {
+                            await provider.toggleFavorite(song);
+                          },
+                        ),
+                        Icon(
+                          CupertinoIcons.play_circle_fill,
+                          color: Theme.of(context).primaryColor,
+                          size: 28,
+                        ),
+                      ],
+                    ),
+                    onTap: () => _playMusic(context, track, favSongs.map((s) => _convertSongToMusicTrack(s)).toList()),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _playMusic(BuildContext context, MusicTrack track, List<MusicTrack> allTracks) async {
+    try {
+      // Get the MusicAppViewModel to get stream URL
+      final viewModel = Provider.of<MusicAppViewModel>(context, listen: false);
+      final streamUrl = await viewModel.getStreamUrl(track.videoId);
+      
+      if (streamUrl != null) {
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (context) => NowPlaying(
+              playingSong: track,
+              songs: allTracks,
+              streamUrl: streamUrl,
+            ),
+          ),
+        );
+      } else {
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('Error'),
+            content: Text('❌ Cannot play: ${track.title}'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Error'),
+          content: Text('Error: $e'),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
       );
     }
   }
 
-  void observeData() {
-    _viewModel.songStream.stream.listen((songList) {
-      setState(() {
-        songs = songList;
-      });
-    });
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';  
   }
 }

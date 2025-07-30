@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MusicHomePage()),
+        MaterialPageRoute(builder: (_) => const MusicApp()),
       );
     }
   } on FirebaseAuthException catch (e) {
@@ -54,16 +54,8 @@ Future<void> signInWithGoogle() async {
   });
 
   try {
-    // Configure Google Sign In to force account selection
-    final GoogleSignIn googleSignIn = GoogleSignIn(
-      scopes: ['email', 'profile'],
-    );
-    
-    // Sign out first to ensure account picker is shown
-    await googleSignIn.signOut();
-    
-    // Trigger the authentication flow with account picker
-    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+    // Trigger the authentication flow
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
     
     if (googleUser == null) {
       setState(() => _loading = false);

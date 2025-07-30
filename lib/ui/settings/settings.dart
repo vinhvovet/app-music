@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
+import 'package:music_app/ui/settings/profile_screen.dart';
 import 'package:provider/provider.dart';
  // giả sử đã tạo
 
@@ -39,8 +40,8 @@ void _logout() async {
   );
 
   if (confirm == true) {
-    final provider = context.read<ProviderStateManagement>();
-       // giả sử đã tạo
+    // Clear any cached data if needed
+    // final provider = context.read<ProviderStateManagement>();
 
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -71,7 +72,14 @@ void _logout() async {
             title: const Text('Tài khoản', style: TextStyle(color: Colors.black)),
             subtitle: const Text('Xem và chỉnh sửa thông tin cá nhân',
                 style: TextStyle(color: Colors.black54)),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
             onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
+                ),
+              );
             },
           ),
           ListTile(

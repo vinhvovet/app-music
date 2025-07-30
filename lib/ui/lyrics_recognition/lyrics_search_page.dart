@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/model/song.dart';
+import '../../data/music_models.dart';
+import '../../startup_performance.dart';
 import '../now_playing/playing.dart';
 
 class LyricsSearchPage extends StatefulWidget {
@@ -16,6 +18,38 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
   final TextEditingController _lyricsController = TextEditingController();
   List<Song> _searchResults = [];
   bool _isSearching = false;
+
+  // Converter function to convert Song to MusicTrack
+  MusicTrack _convertSongToMusicTrack(Song song) {
+    try {
+      return MusicTrack(
+        id: song.id,
+        videoId: song.id,
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        thumbnail: song.image,
+        url: song.source,
+        duration: Duration(seconds: song.duration),
+        isFavorite: song.isFavorite,
+        extras: {
+          'originalSong': song,
+          'source': song.source,
+          'lyrics': song.lyrics,
+          'lyricsData': song.lyricsData,
+        },
+      );
+    } catch (e) {
+      print('Error converting Song to MusicTrack: $e');
+      return MusicTrack(
+        id: 'error',
+        videoId: 'error',
+        title: 'Error loading song',
+        artist: 'Unknown Artist',
+        isFavorite: false,
+      );
+    }
+  }
 
   void _searchInSongs(String lyrics) {
     if (lyrics.trim().isEmpty) {
@@ -55,7 +89,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tìm kiếm theo lời bài hát'),
+        title: const Text('Search by Lyrics'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -85,7 +119,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Nhập lời bài hát',
+                        'Enter song lyrics',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -99,7 +133,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                     controller: _lyricsController,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: 'Ví dụ: "Anh yêu em như những dòng sông..."',
+                      hintText: 'Example: "I love you like the flowing rivers..."',
                       hintStyle: TextStyle(
                         color: Colors.grey[500],
                         fontSize: 14,
@@ -127,7 +161,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Gõ lời bài hát để tìm kiếm',
+                        'Type song lyrics to search',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -140,7 +174,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                             _searchInSongs('');
                           },
                           child: const Text(
-                            'Xóa',
+                            'Clear',
                             style: TextStyle(
                               color: Color(0xFF3EA513),
                               fontSize: 12,
@@ -167,7 +201,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                           ),
                           SizedBox(height: 16),
                           Text(
-                            'Đang tìm kiếm...',
+                            'Searching...',
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey,
@@ -188,7 +222,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'Không tìm thấy bài hát phù hợp',
+                                'No matching songs found',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w500,
@@ -197,7 +231,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Thử nhập lời bài hát khác',
+                                'Try entering different lyrics',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[500],
@@ -218,7 +252,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Nhập lời bài hát để tìm kiếm',
+                                    'Enter song lyrics to search',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w500,
@@ -227,7 +261,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Ứng dụng sẽ tìm kiếm trong cơ sở dữ liệu lời bài hát',
+                                    'The app will search in the lyrics database',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 14,
@@ -251,7 +285,7 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Tìm thấy ${_searchResults.length} bài hát',
+                                        'Found ${_searchResults.length} songs',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -347,16 +381,48 @@ class _LyricsSearchPageState extends State<LyricsSearchPage> {
                                               size: 24,
                                             ),
                                           ),
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => NowPlaying(
-                                                  playingSong: song,
-                                                  songs: widget.songs,
+                                          onTap: () async {
+                                            try {
+                                              // Convert Song to MusicTrack for the updated playing screen
+                                              final currentTrack = _convertSongToMusicTrack(song);
+                                              final playlistTracks = widget.songs.map(_convertSongToMusicTrack).toList();
+                                              
+                                              // Get stream URL from API
+                                              final api = StartupPerformance.musicAPI;
+                                              final songDetails = await api.getSongDetails(currentTrack.videoId);
+                                              
+                                              String? streamUrl;
+                                              if (songDetails['streamingUrls'] != null) {
+                                                final streamingUrls = songDetails['streamingUrls'] as List<Map<String, dynamic>>;
+                                                if (streamingUrls.isNotEmpty) {
+                                                  streamUrl = streamingUrls.first['url'] as String;
+                                                }
+                                              }
+                                              
+                                              // Fallback to original URL if API fails
+                                              streamUrl ??= currentTrack.url ?? currentTrack.extras?['source'] ?? '';
+                                              
+                                              if (streamUrl != null && streamUrl.isNotEmpty) {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => NowPlaying(
+                                                      playingSong: currentTrack,
+                                                      songs: playlistTracks,
+                                                      streamUrl: streamUrl!,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              print('Error navigating to NowPlaying: $e');
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error playing song: $e'),
+                                                  backgroundColor: Colors.red,
                                                 ),
-                                              ),
-                                            );
+                                              );
+                                            }
                                           },
                                         ),
                                       );

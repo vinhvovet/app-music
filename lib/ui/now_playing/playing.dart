@@ -3,23 +3,33 @@ import 'dart:math';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:music_app/state management/provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../data/model/song.dart';
+import '../../data/music_models.dart';
 import 'audio_player_manager.dart';
+import '../../startup_performance.dart';
 
 class NowPlaying extends StatelessWidget {
-  const NowPlaying({super.key, required this.playingSong, required this.songs});
+  const NowPlaying({
+    super.key, 
+    required this.playingSong, 
+    required this.songs,
+    required this.streamUrl,
+  });
 
-  final Song playingSong;
-  final List<Song> songs;
+  final MusicTrack playingSong;
+  final List<MusicTrack> songs;
+  final String streamUrl;
 
   @override
   Widget build(BuildContext context) {
-    return NowPlayingPage(songs: songs, playingSong: playingSong);
+    return NowPlayingPage(
+      songs: songs, 
+      playingSong: playingSong,
+      streamUrl: streamUrl,
+    );
   }
 }
 
@@ -28,10 +38,12 @@ class NowPlayingPage extends StatefulWidget {
     super.key,
     required this.songs,
     required this.playingSong,
+    required this.streamUrl,
   });
 
-  final Song playingSong;
-  final List<Song> songs;
+  final MusicTrack playingSong;
+  final List<MusicTrack> songs;
+  final String streamUrl;
 
   @override
   State<NowPlayingPage> createState() => _NowPlayingPageState();
@@ -42,7 +54,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   late AnimationController _imageAnimController;
   late AudioPlayerManager _audioPlayerManager;
   late int _selectedItemIndex;
-  late Song _song;
+  late MusicTrack _song;
   double _currentAnimationPosition = 0.0;
   bool _isShuffle = false;
   late LoopMode _loopMode;
@@ -63,15 +75,18 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       vsync: this,
       duration: const Duration(milliseconds: 12000),
     );
-    // Không khởi động animation ngay lập tức, chỉ khi user ấn play
+    // Do not start animation immediately, only when user presses play
 
     _audioPlayerManager = AudioPlayerManager();
-    if (_audioPlayerManager.currentUrl != _song.source) {
-      _audioPlayerManager.updateSongUrl(_song.source);
+    
+    // Use the streamUrl from API instead of old URL
+    if (_audioPlayerManager.currentUrl != widget.streamUrl) {
+      _audioPlayerManager.updateSongUrl(widget.streamUrl);
       _audioPlayerManager.prepare(isNewSong: true);
     } else {
       _audioPlayerManager.prepare(isNewSong: false);
     }
+    
     _selectedItemIndex = widget.songs.indexOf(widget.playingSong);
     _loopMode = LoopMode.off;
     _audioPlayerManager.playerStateStream.listen((playerState) {
@@ -102,8 +117,8 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     final radius = imageSize / 2;
 
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: const Text('Now Playing'),
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Now Playing'),
         // trailing: IconButton(
         //   onPressed: () {},
         //   icon: const Icon(Icons.more_horiz),
@@ -125,7 +140,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         const SizedBox(height: 100),
-        Text(_song.album),
+        Text(_song.album?.isNotEmpty == true ? _song.album! : 'Single'),
         // Indicator 2 hình chữ nhật
         SizedBox(
           height: 60,
@@ -252,7 +267,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
         borderRadius: BorderRadius.circular(radius),
         child: FadeInImage.assetNetwork(
           placeholder: 'assets/itunes_256.png',
-          image: _song.image,
+          image: _song.thumbnail ?? '',
           width: imageSize,
           height: imageSize,
           fit: BoxFit.cover,
@@ -293,7 +308,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _song.artist,
+                  _song.artist?.isNotEmpty == true ? _song.artist! : 'Various Artists',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
                   ),
@@ -305,12 +320,12 @@ class _NowPlayingPageState extends State<NowPlayingPage>
             ),
           ),
           FutureBuilder<bool>(
-            future: provider.isFavorite(_song),
+            future: _checkFavorite(provider, _song),
             builder: (context, snapshot) {
               final isFav = snapshot.data ?? false;
               return IconButton(
                 onPressed: () {
-                  provider.toggleFavorite(_song);
+                  _toggleFavorite(provider, _song);
                 },
                 icon: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border_outlined,
@@ -340,7 +355,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               ),
               const SizedBox(height: 20),
               Text(
-                'Trang này đang được phát triển',
+                'This page is under development',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.grey[500],
                   fontWeight: FontWeight.w500,
@@ -349,7 +364,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               ),
               const SizedBox(height: 8),
               Text(
-                'Các tính năng mới sẽ sớm được thêm vào',
+                'New features will be added soon',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[400],
                 ),
@@ -371,15 +386,24 @@ class _NowPlayingPageState extends State<NowPlayingPage>
 
   void _shareSong() {
     final songTitle = _song.title;
-    final songArtist = _song.artist;
-    final songUrl = _song.source;
+    final songArtist = _song.artist?.isNotEmpty == true ? _song.artist! : 'Various Artists';
+    final songUrl = _song.url ?? _song.extras?['url'] ?? '';
 
     final shareContent =
-        '🎵 bài hát "$songTitle" của $songArtist. Nghe ngay tại đây: $songUrl';
+        '🎵 song "$songTitle" by $songArtist. Listen now: $songUrl';
     Share.share(shareContent);
   }
 
-  void _onSongCompleted() {
+  // Helper methods for favorite functionality
+  Future<bool> _checkFavorite(ProviderStateManagement provider, MusicTrack track) async {
+    return await provider.isFavoriteMusicTrack(track);
+  }
+
+  void _toggleFavorite(ProviderStateManagement provider, MusicTrack track) async {
+    await provider.toggleFavoriteMusicTrack(track);
+  }
+
+  void _onSongCompleted() async {
     if (_loopMode == LoopMode.one) {
       _audioPlayerManager.player.seek(Duration.zero);
       _audioPlayerManager.player.play();
@@ -394,13 +418,37 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     } else {
       return;
     }
+    
     final nextSong = widget.songs[_selectedItemIndex];
-    setState(() => _song = nextSong);
-    _audioPlayerManager.updateSongUrl(nextSong.source);
-    _audioPlayerManager.prepare(isNewSong: true);
-    _audioPlayerManager.player.play();
-    _resetRotationAnim();
-    _playRotationAnim();
+    
+    try {
+      // Get stream URL for next track from API
+      final api = StartupPerformance.musicAPI;
+      final songDetails = await api.getSongDetails(nextSong.videoId);
+      
+      if (songDetails['streamingUrls'] != null) {
+        final streamingUrls = songDetails['streamingUrls'] as List<Map<String, dynamic>>;
+        if (streamingUrls.isNotEmpty) {
+          final streamUrl = streamingUrls.first['url'] as String;
+          
+          setState(() => _song = nextSong);
+          _audioPlayerManager.updateSongUrl(streamUrl);
+          _audioPlayerManager.prepare(isNewSong: true);
+          _audioPlayerManager.player.play();
+          _resetRotationAnim();
+          _playRotationAnim();
+        }
+      }
+    } catch (e) {
+      print('Error getting stream URL for completed song: $e');
+      // Fallback to old method if API fails
+      setState(() => _song = nextSong);
+      _audioPlayerManager.updateSongUrl(nextSong.url ?? nextSong.extras?['url'] ?? '');
+      _audioPlayerManager.prepare(isNewSong: true);
+      _audioPlayerManager.player.play();
+      _resetRotationAnim();
+      _playRotationAnim();
+    }
   }
 
   void _resetRotationAnim() {
@@ -529,7 +577,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     );
   }
 
-  void _setNextSong() {
+  void _setNextSong() async {
     if (_isShuffle) {
       var random = Random();
       _selectedItemIndex = random.nextInt(widget.songs.length);
@@ -542,17 +590,42 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     if (_selectedItemIndex >= widget.songs.length) {
       _selectedItemIndex = _selectedItemIndex % widget.songs.length;
     }
+    
     final nextSong = widget.songs[_selectedItemIndex];
-    _audioPlayerManager.updateSongUrl(nextSong.source);
-    _audioPlayerManager.prepare(isNewSong: true); // 👈 thêm dòng này
-    _audioPlayerManager.player.play(); // 👈 thêm dòng này
-    _resetRotationAnim();
-    setState(() {
-      _song = nextSong;
-    });
+    
+    try {
+      // Get stream URL for new track from API
+      final api = StartupPerformance.musicAPI;
+      final songDetails = await api.getSongDetails(nextSong.videoId);
+      
+      if (songDetails['streamingUrls'] != null) {
+        final streamingUrls = songDetails['streamingUrls'] as List<Map<String, dynamic>>;
+        if (streamingUrls.isNotEmpty) {
+          final streamUrl = streamingUrls.first['url'] as String;
+          
+          _audioPlayerManager.updateSongUrl(streamUrl);
+          _audioPlayerManager.prepare(isNewSong: true);
+          _audioPlayerManager.player.play();
+          _resetRotationAnim();
+          setState(() {
+            _song = nextSong;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error getting stream URL for next song: $e');
+      // Fallback to old method if API fails
+      _audioPlayerManager.updateSongUrl(nextSong.url ?? nextSong.extras?['url'] ?? '');
+      _audioPlayerManager.prepare(isNewSong: true);
+      _audioPlayerManager.player.play();
+      _resetRotationAnim();
+      setState(() {
+        _song = nextSong;
+      });
+    }
   }
 
-  void _setPrevSong() {
+  void _setPrevSong() async {
     if (_isShuffle) {
       var random = Random();
       _selectedItemIndex = random.nextInt(widget.songs.length);
@@ -564,14 +637,39 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     if (_selectedItemIndex < 0) {
       _selectedItemIndex = (-1 * _selectedItemIndex) % widget.songs.length;
     }
-    final nextSong = widget.songs[_selectedItemIndex];
-    _audioPlayerManager.updateSongUrl(nextSong.source);
-    _audioPlayerManager.prepare(isNewSong: true); // 👈 thêm dòng này
-    _audioPlayerManager.player.play(); // 👈 thêm dòng này
-    _resetRotationAnim();
-    setState(() {
-      _song = nextSong;
-    });
+    
+    final prevSong = widget.songs[_selectedItemIndex];
+    
+    try {
+      // Get stream URL for previous track from API
+      final api = StartupPerformance.musicAPI;
+      final songDetails = await api.getSongDetails(prevSong.videoId);
+      
+      if (songDetails['streamingUrls'] != null) {
+        final streamingUrls = songDetails['streamingUrls'] as List<Map<String, dynamic>>;
+        if (streamingUrls.isNotEmpty) {
+          final streamUrl = streamingUrls.first['url'] as String;
+          
+          _audioPlayerManager.updateSongUrl(streamUrl);
+          _audioPlayerManager.prepare(isNewSong: true);
+          _audioPlayerManager.player.play();
+          _resetRotationAnim();
+          setState(() {
+            _song = prevSong;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error getting stream URL for previous song: $e');
+      // Fallback to old method if API fails
+      _audioPlayerManager.updateSongUrl(prevSong.url ?? prevSong.extras?['url'] ?? '');
+      _audioPlayerManager.prepare(isNewSong: true);
+      _audioPlayerManager.player.play();
+      _resetRotationAnim();
+      setState(() {
+        _song = prevSong;
+      });
+    }
   }
 
   void _setupRepeatOption() {

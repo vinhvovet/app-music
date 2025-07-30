@@ -28,16 +28,6 @@ class MusicAppViewModel {
       if (popularSongs.isNotEmpty) {
         print('[ViewModel] Loaded ${popularSongs.length} popular songs from API');
         
-        // Debug: Print first song data
-        if (popularSongs.isNotEmpty) {
-          final firstSong = popularSongs.first;
-          print('[ViewModel] DEBUG First song raw data:');
-          print('[ViewModel] - videoId: ${firstSong['videoId']}');  
-          print('[ViewModel] - title: "${firstSong['title']}"');
-          print('[ViewModel] - artist: "${firstSong['artist']}"');
-          print('[ViewModel] - thumbnail: ${firstSong['thumbnail']}');
-        }
-        
         final tracks = popularSongs.map((songData) => _convertToMusicTrack(songData)).toList();
         _allSongs = tracks;
         songStream.add(tracks);
@@ -62,34 +52,15 @@ class MusicAppViewModel {
 
   MusicTrack _convertToMusicTrack(Map<String, dynamic> data) {
     try {
-      // Debug: Print raw data first
-      print('[ViewModel] DEBUG Converting track data:');
-      print('[ViewModel] - Raw title: "${data['title']}"');
-      print('[ViewModel] - Raw artist: "${data['artist']}"');
-      
-      // Improved title extraction
-      String title = data['title']?.toString().trim() ?? '';
-      if (title.isEmpty || title == 'Unknown Title') {
-        // Try to extract from videoId or other fields
-        title = data['videoId']?.toString() ?? 'Untitled Song';
-      }
-
-      // Improved artist extraction
-      String? artist = data['artist']?.toString().trim();
-      if (artist == null || artist.isEmpty || artist == 'Unknown Artist') {
-        // Try to extract from other fields or leave as null
-        artist = null;
-      }
-
-      print('[ViewModel] DEBUG After processing:');
-      print('[ViewModel] - Final title: "$title"');
-      print('[ViewModel] - Final artist: "$artist"');
-
       return MusicTrack(
         id: data['videoId'] ?? '',
         videoId: data['videoId'] ?? '',
-        title: title,  
-        artist: artist,
+        title: (data['title'] != null && data['title'].toString().trim().isNotEmpty) 
+            ? data['title'].toString().trim() 
+            : 'Unknown Title',  
+        artist: (data['artist'] != null && data['artist'].toString().trim().isNotEmpty) 
+            ? data['artist'].toString().trim() 
+            : 'Unknown Artist',
         thumbnail: data['thumbnail'],
         duration: data['duration'] != null 
             ? Duration(seconds: data['duration']) 
@@ -105,7 +76,7 @@ class MusicAppViewModel {
         id: 'error',
         videoId: 'error',
         title: 'Error loading song',
-        artist: null,
+        artist: 'Unknown',
         isFavorite: false,
       );
     }
@@ -181,7 +152,6 @@ class MusicAppViewModel {
           songStream.add([]);
           print('[ViewModel] No search results for "$query"');
         }
-        
       } catch (e) {
         print('[ViewModel] Search error: $e');
         // Fallback to local search in all songs
