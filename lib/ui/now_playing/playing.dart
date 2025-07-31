@@ -87,10 +87,21 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       _audioPlayerManager.prepare(isNewSong: false);
     }
     
+    // Auto-play nhạc khi vào giao diện
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _audioPlayerManager.player.play();
+        _playRotationAnim(); // Bắt đầu animation CD quay
+        print('🎵 Auto-playing music when entering screen');
+      }
+    });
+    
     _selectedItemIndex = widget.songs.indexOf(widget.playingSong);
-    _loopMode = LoopMode.off;
+    _loopMode = LoopMode.all; // Default to loop all for auto-next
     _audioPlayerManager.playerStateStream.listen((playerState) {
-      if (playerState.processingState == ProcessingState.completed) {
+      print('Player state: ${playerState.processingState}, playing: ${playerState.playing}');
+      if (mounted && playerState.processingState == ProcessingState.completed) {
+        print('Song completed, triggering auto-next');
         _onSongCompleted();
       }
     });
@@ -387,10 +398,12 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   void _shareSong() {
     final songTitle = _song.title;
     final songArtist = _song.artist?.isNotEmpty == true ? _song.artist! : 'Various Artists';
-    final songUrl = _song.url ?? _song.extras?['url'] ?? '';
+    final videoId = _song.videoId;
+    
+    // Tạo link YouTube Music có thể nghe được
+    final musicLink = 'https://music.youtube.com/watch?v=$videoId';
 
-    final shareContent =
-        '🎵 song "$songTitle" by $songArtist. Listen now: $songUrl';
+    final shareContent = '🎵 "$songTitle" by $songArtist\n\n🎧 Listen here: $musicLink';
     Share.share(shareContent);
   }
 
@@ -404,22 +417,36 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   }
 
   void _onSongCompleted() async {
+    print('Song completed, checking auto-next...');
+    
+    if (!mounted) {
+      print('Widget not mounted, skipping auto-next');
+      return;
+    }
+    
     if (_loopMode == LoopMode.one) {
+      print('Looping current song');
       _audioPlayerManager.player.seek(Duration.zero);
       _audioPlayerManager.player.play();
       return;
     }
+    
     if (_isShuffle) {
       _selectedItemIndex = Random().nextInt(widget.songs.length);
+      print('Shuffle mode: next index = $_selectedItemIndex');
     } else if (_selectedItemIndex < widget.songs.length - 1) {
       ++_selectedItemIndex;
+      print('Normal mode: next index = $_selectedItemIndex');
     } else if (_loopMode == LoopMode.all) {
       _selectedItemIndex = 0;
+      print('Loop all: back to first song');
     } else {
+      print('End of playlist, stopping');
       return;
     }
     
     final nextSong = widget.songs[_selectedItemIndex];
+    print('Auto-playing next song: ${nextSong.title}');
     
     try {
       // Get stream URL for next track from API
@@ -434,20 +461,35 @@ class _NowPlayingPageState extends State<NowPlayingPage>
           setState(() => _song = nextSong);
           _audioPlayerManager.updateSongUrl(streamUrl);
           _audioPlayerManager.prepare(isNewSong: true);
-          _audioPlayerManager.player.play();
-          _resetRotationAnim();
-          _playRotationAnim();
+          
+          // Auto-play the next song immediately
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              _audioPlayerManager.player.play();
+              _resetRotationAnim();
+              _playRotationAnim();
+              print('Successfully auto-played next song');
+            }
+          });
         }
       }
     } catch (e) {
       print('Error getting stream URL for completed song: $e');
       // Fallback to old method if API fails
       setState(() => _song = nextSong);
-      _audioPlayerManager.updateSongUrl(nextSong.url ?? nextSong.extras?['url'] ?? '');
+      final fallbackUrl = nextSong.url ?? nextSong.extras?['url'] ?? '';
+      _audioPlayerManager.updateSongUrl(fallbackUrl);
       _audioPlayerManager.prepare(isNewSong: true);
-      _audioPlayerManager.player.play();
-      _resetRotationAnim();
-      _playRotationAnim();
+      
+      // Auto-play with fallback URL
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _audioPlayerManager.player.play();
+          _resetRotationAnim();
+          _playRotationAnim();
+          print('Successfully auto-played next song (fallback)');
+        }
+      });
     }
   }
 

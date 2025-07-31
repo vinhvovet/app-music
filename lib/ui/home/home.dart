@@ -6,6 +6,7 @@ import 'package:music_app/ui/home/viewmodel.dart';
 import 'package:music_app/ui/settings/settings.dart';
 import 'package:music_app/ui/account/user.dart';
 import 'package:music_app/ui/now_playing/playing.dart';
+import 'package:music_app/ui/components/now_playing_bar.dart';
 import '../../data/music_models.dart';
 import '../../data/model/song.dart';
 import '../../state management/provider.dart';
@@ -42,6 +43,81 @@ class _MusicHomePageState extends State<MusicHomePage> {
     const SettingsTab(),
   ];
 
+  /// 🚀 Show test menu with Lightning Fast option
+  void _showTestMenu(BuildContext context) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (BuildContext context) => CupertinoActionSheet(
+        title: const Text('🧪 Music Tests'),
+        message: const Text('Choose a test to run'),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(CupertinoIcons.bolt_fill, color: CupertinoColors.systemYellow),
+                SizedBox(width: 8),
+                Text('⚡ Lightning Fast Test (20X Speed)'),
+              ],
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/lightning-test');
+            },
+          ),
+          CupertinoActionSheetAction(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(CupertinoIcons.music_note, color: CupertinoColors.systemPurple),
+                SizedBox(width: 8),
+                Text('🎵 Harmony Music Test'),
+              ],
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/harmony-test');
+            },
+          ),
+          CupertinoActionSheetAction(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(CupertinoIcons.search, color: CupertinoColors.systemBlue),
+                SizedBox(width: 8),
+                Text('🔍 Fast Search'),
+              ],
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/fast-search');
+            },
+          ),
+          CupertinoActionSheetAction(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(CupertinoIcons.lab_flask, color: CupertinoColors.systemGreen),
+                SizedBox(width: 8),
+                Text('🧪 YouTube API Test'),
+              ],
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/test-api');
+            },
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          child: const Text('Cancel'),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
@@ -51,9 +127,9 @@ class _MusicHomePageState extends State<MusicHomePage> {
         middle: const Text('Music Player'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.lab_flask),
+          child: const Icon(CupertinoIcons.sparkles),
           onPressed: () {
-            Navigator.pushNamed(context, '/test-api');
+            _showTestMenu(context);
           },
         ),
       ),
@@ -99,6 +175,7 @@ class _HomeTabState extends State<HomeTab> {
   List<MusicTrack> songs = [];
   bool isLoading = false;
   bool _isPlayingMusic = false;
+  String? _loadingTrackId; // Track which song is currently loading
   final TextEditingController _searchController = TextEditingController();
 
   @override  
@@ -108,6 +185,10 @@ class _HomeTabState extends State<HomeTab> {
     // Get viewModel from Provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _musicAppViewModel = Provider.of<MusicAppViewModel>(context, listen: false);
+      
+      // Auto load songs when tab is initialized
+      print('HomeTab: Auto-loading songs...');
+      _musicAppViewModel!.loadSongs();
       
       // Listen to songs stream
       _musicAppViewModel!.songStream.stream.listen((event) {
@@ -148,7 +229,7 @@ class _HomeTabState extends State<HomeTab> {
       navigationBar: CupertinoNavigationBar(
         heroTag: "home_tab",
         transitionBetweenRoutes: false,
-        middle: const Text('Music Library'),
+        middle: const Text('50 Bài Mới Nhất'),
       ),
       child: SafeArea(
         child: Column(
@@ -188,6 +269,9 @@ class _HomeTabState extends State<HomeTab> {
                 },
               ),
             ),
+            
+            // Now Playing Bar - shows below search when music is playing
+            const NowPlayingBar(),
             // Songs List
             Expanded(
               child: songs.isEmpty && isLoading
@@ -197,7 +281,7 @@ class _HomeTabState extends State<HomeTab> {
                   children: [
                     CupertinoActivityIndicator(),
                     SizedBox(height: 16),
-                    Text('Loading music from YouTube Music...'),
+                    Text('Đang tải 50 bài nhạc mới nhất...'),
                   ],
                 ),
               )
@@ -206,11 +290,11 @@ class _HomeTabState extends State<HomeTab> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.music_off, size: 64, color: Colors.grey),
+                        CircularProgressIndicator(),
                         SizedBox(height: 16),
-                        Text('No songs found'),
+                        Text('Loading'),
                         SizedBox(height: 8),
-                        Text('Try searching for different songs', style: TextStyle(color: Colors.grey)),
+    
                       ],
                     ),
                   )
@@ -312,11 +396,14 @@ class _HomeTabState extends State<HomeTab> {
                                   await provider.toggleFavoriteMusicTrack(track);
                                 },
                               ),
-                              Icon(
-                                CupertinoIcons.play_circle_fill,
-                                color: Theme.of(context).primaryColor,
-                                size: 28,
-                              ),
+                              // Show loading or play icon based on state
+                              _loadingTrackId == track.videoId
+                                  ? const CupertinoActivityIndicator()
+                                  : Icon(
+                                      CupertinoIcons.play_circle_fill,
+                                      color: Theme.of(context).primaryColor,
+                                      size: 28,
+                                    ),
                             ],
                           ),
                           onTap: () => _playMusic(track),
@@ -336,6 +423,36 @@ class _HomeTabState extends State<HomeTab> {
 
     // Prevent multiple calls
     if (_isPlayingMusic) return;
+    
+    // Set loading state for this specific track
+    setState(() {
+      _loadingTrackId = track.videoId;
+    });
+    
+    // Get provider to check current playing state
+    final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+    
+    // Check if the same song is already playing
+    if (provider.isTrackCurrentlyPlaying(track)) {
+      // Just navigate to the playing screen without restarting
+      if (mounted && provider.currentStreamUrl != null) {
+        setState(() {
+          _loadingTrackId = null; // Clear loading state
+        });
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (context) => NowPlaying(
+              playingSong: track,
+              songs: provider.currentPlaylist ?? songs,
+              streamUrl: provider.currentStreamUrl!,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    
     _isPlayingMusic = true;
 
     try {
@@ -344,8 +461,14 @@ class _HomeTabState extends State<HomeTab> {
       
       
       if (streamUrl != null) {
+        // Update provider with currently playing track
+        provider.setCurrentlyPlayingTrack(track, streamUrl, songs);
+        
         // Navigate to now playing screen
         if (mounted) {
+          setState(() {
+            _loadingTrackId = null; // Clear loading state
+          });
           Navigator.push(
             context,
             CupertinoPageRoute(
@@ -358,6 +481,9 @@ class _HomeTabState extends State<HomeTab> {
           );
         }
       } else {
+        setState(() {
+          _loadingTrackId = null; // Clear loading state
+        });
         if (mounted) {
           showCupertinoDialog(
             context: context,
@@ -375,6 +501,9 @@ class _HomeTabState extends State<HomeTab> {
         }
       }
     } catch (e) {
+      setState(() {
+        _loadingTrackId = null; // Clear loading state
+      });
       if (mounted) {
         showCupertinoDialog(
           context: context,
@@ -392,6 +521,12 @@ class _HomeTabState extends State<HomeTab> {
       }
     } finally {
       _isPlayingMusic = false;
+      // Ensure loading state is cleared
+      if (mounted) {
+        setState(() {
+          _loadingTrackId = null;
+        });
+      }
     }
   }
 
@@ -416,7 +551,7 @@ class ListFavorite extends StatelessWidget {
       album: song.album,
       thumbnail: song.image,
       url: song.source,
-      duration: Duration(seconds: song.duration),
+      duration: null, // Remove duration for favorites
       isFavorite: song.isFavorite,
       extras: {
         'originalSong': song,
@@ -524,29 +659,16 @@ class ListFavorite extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          track.artist?.isNotEmpty == true 
-                              ? track.artist! 
-                              : 'Various Artists',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 14,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (track.duration != null)
-                          Text(
-                            _formatDuration(track.duration!),
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
+                    subtitle: Text(
+                      track.artist?.isNotEmpty == true 
+                          ? track.artist! 
+                          : 'Various Artists',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -581,11 +703,35 @@ class ListFavorite extends StatelessWidget {
 
   void _playMusic(BuildContext context, MusicTrack track, List<MusicTrack> allTracks) async {
     try {
+      // Get provider to check current playing state
+      final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+      
+      // Check if the same song is already playing
+      if (provider.isTrackCurrentlyPlaying(track)) {
+        // Just navigate to the playing screen without restarting
+        if (provider.currentStreamUrl != null) {
+          Navigator.push(
+            context,
+            CupertinoPageRoute(
+              builder: (context) => NowPlaying(
+                playingSong: track,
+                songs: provider.currentPlaylist ?? allTracks,
+                streamUrl: provider.currentStreamUrl!,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      
       // Get the MusicAppViewModel to get stream URL
       final viewModel = Provider.of<MusicAppViewModel>(context, listen: false);
       final streamUrl = await viewModel.getStreamUrl(track.videoId);
       
       if (streamUrl != null) {
+        // Update provider with currently playing track
+        provider.setCurrentlyPlayingTrack(track, streamUrl, allTracks);
+        
         Navigator.push(
           context,
           CupertinoPageRoute(
@@ -626,12 +772,5 @@ class ListFavorite extends StatelessWidget {
         ),
       );
     }
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';  
   }
 }

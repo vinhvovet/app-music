@@ -3,29 +3,30 @@ import 'package:music_app/state management/provider.dart';
 import 'package:music_app/ui/now_playing/playing.dart'; // import màn hình NowPlaying
 import 'package:provider/provider.dart';
 import '../../data/music_models.dart';
+import '../../data/model/song.dart';
 import '../../startup_performance.dart';
 
 class ListFavorite extends StatelessWidget {
   const ListFavorite({super.key});
 
   // Converter function to convert Song to MusicTrack
-  MusicTrack _convertSongToMusicTrack(dynamic song) {
+  MusicTrack _convertSongToMusicTrack(Song song) {
     try {
       return MusicTrack(
-        id: song.id ?? '',
-        videoId: song.id ?? '',
-        title: song.title?.isNotEmpty == true ? song.title! : 'Untitled Song',
-        artist: song.artist?.isNotEmpty == true ? song.artist : null,
-        album: song.album?.isNotEmpty == true ? song.album : null,
-        thumbnail: song.image ?? '',
-        url: song.source ?? '',
-        duration: song.duration != null ? Duration(seconds: song.duration is int ? song.duration : 0) : null,
-        isFavorite: song.isFavorite ?? false,
+        id: song.id,
+        videoId: song.id,
+        title: song.title.isNotEmpty ? song.title : 'Untitled Song',
+        artist: song.artist.isNotEmpty ? song.artist : null,
+        album: song.album.isNotEmpty ? song.album : null,
+        thumbnail: song.image,
+        url: song.source,
+        duration: null, // No duration needed for favorites
+        isFavorite: song.isFavorite,
         extras: {
           'originalSong': song,
-          'source': song.source ?? '',
-          'lyrics': song.lyrics, // Keep original lyrics (may be null)
-          'lyricsData': song.lyricsData, // Keep original lyricsData (may be null)
+          'source': song.source,
+          'lyrics': song.lyrics,
+          'lyricsData': song.lyricsData,
         },
       );
     } catch (e) {
@@ -115,23 +116,32 @@ class ListFavorite extends StatelessWidget {
                       ),
                       onTap: () async {
                         try {
+                          print('[ListFavorite] Playing song: ${song.title} by ${song.artist}');
+                          
                           // Convert Song to MusicTrack for the updated playing screen
                           final currentTrack = _convertSongToMusicTrack(song);
-                          final playlistTracks = favSongs.map(_convertSongToMusicTrack).toList();
+                          final playlistTracks = favSongs.map((s) => _convertSongToMusicTrack(s)).toList();
+                          
+                          print('[ListFavorite] Converted ${playlistTracks.length} tracks');
+                          print('[ListFavorite] Current track ID: ${currentTrack.videoId}');
                           
                           // Get stream URL for the favorite song
                           final api = StartupPerformance.musicAPI;
+                          print('[ListFavorite] Getting song details for videoId: ${currentTrack.videoId}');
                           final songDetails = await api.getSongDetails(currentTrack.videoId);
                           
                           String? streamUrl;
                           if (songDetails['streamingUrls'] != null) {
-                            final streamingUrls = songDetails['streamingUrls'] as List<Map<String, dynamic>>;
+                            final streamingUrlsRaw = songDetails['streamingUrls'] as List<dynamic>;
+                            final streamingUrls = streamingUrlsRaw.cast<Map<String, dynamic>>();
                             if (streamingUrls.isNotEmpty) {
                               streamUrl = streamingUrls.first['url'] as String;
+                              print('[ListFavorite] Got stream URL from API');
                             }
                           }
                           
                           if (streamUrl != null) {
+                            print('[ListFavorite] Navigating to NowPlaying with API stream URL');
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => NowPlaying(
@@ -143,23 +153,31 @@ class ListFavorite extends StatelessWidget {
                             );
                           } else {
                             // Fallback to original URL if API fails
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => NowPlaying(
-                                  playingSong: currentTrack,
-                                  songs: playlistTracks,
-                                  streamUrl: currentTrack.url ?? currentTrack.extras?['source'] ?? '',
+                            final fallbackUrl = currentTrack.url ?? currentTrack.extras?['source'] ?? song.source;
+                            print('[ListFavorite] Using fallback URL: $fallbackUrl');
+                            
+                            if (fallbackUrl.isNotEmpty) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => NowPlaying(
+                                    playingSong: currentTrack,
+                                    songs: playlistTracks,
+                                    streamUrl: fallbackUrl,
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            } else {
+                              throw Exception('No valid stream URL found');
+                            }
                           }
                         } catch (e) {
-                          print('Error navigating to NowPlaying: $e');
+                          print('[ListFavorite] Error navigating to NowPlaying: $e');
                           // Show error dialog or handle gracefully
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Error playing song: $e'),
+                              content: Text('Error playing song: ${e.toString()}'),
                               backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 3),
                             ),
                           );
                         }

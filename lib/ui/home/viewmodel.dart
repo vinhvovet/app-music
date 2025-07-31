@@ -3,12 +3,27 @@ import '../../data/music_models.dart';
 import '../../startup_performance.dart';
 
 class MusicAppViewModel {
-  final StreamController<List<MusicTrack>> songStream = StreamController.broadcast();
-  final StreamController<bool> loadingStream = StreamController.broadcast();
+  StreamController<List<MusicTrack>>? _songStream;
+  StreamController<bool>? _loadingStream;
   
   List<MusicTrack> _allSongs = [];
   bool _isLoading = false;
   Timer? _searchTimer;
+
+  // Lazy initialization of streams
+  StreamController<List<MusicTrack>> get songStream {
+    if (_songStream == null || _songStream!.isClosed) {
+      _songStream = StreamController.broadcast();
+    }
+    return _songStream!;
+  }
+  
+  StreamController<bool> get loadingStream {
+    if (_loadingStream == null || _loadingStream!.isClosed) {
+      _loadingStream = StreamController.broadcast();
+    }
+    return _loadingStream!;
+  }
 
   // Add loading state getter
   bool get isLoading => _isLoading;
@@ -22,8 +37,8 @@ class MusicAppViewModel {
       print('[ViewModel] Loading songs using YouTube Music Complete API...');
       final api = StartupPerformance.musicAPI;
       
-      // Load popular songs using the new API
-      final popularSongs = await api.getPopularSongs(limit: 15);
+      // Load 50 bài mới nhất using the new API  
+      final popularSongs = await api.getPopularSongs(limit: 50);
       
       if (popularSongs.isNotEmpty) {
         print('[ViewModel] Loaded ${popularSongs.length} popular songs from API');
@@ -40,12 +55,16 @@ class MusicAppViewModel {
         
         final tracks = popularSongs.map((songData) => _convertToMusicTrack(songData)).toList();
         _allSongs = tracks;
+        
+        // Stream will be recreated if closed, so we can safely add
         songStream.add(tracks);
       } else {
         print('[ViewModel] No popular songs found, using fallback');
         // Fallback: Create some mock data
         final mockSongs = _createMockSongs();
         _allSongs = mockSongs;
+        
+        // Stream will be recreated if closed, so we can safely add
         songStream.add(mockSongs);
       }
       
@@ -54,10 +73,19 @@ class MusicAppViewModel {
       // Add mock songs as fallback
       final mockSongs = _createMockSongs();
       _allSongs = mockSongs;
+      
+      // Stream will be recreated if closed, so we can safely add
       songStream.add(mockSongs);
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Reset and reload songs (useful after login/logout)
+  void resetAndLoadSongs() {
+    print('[ViewModel] Resetting and reloading songs...');
+    _allSongs.clear();
+    loadSongs();
   }
 
   MusicTrack _convertToMusicTrack(Map<String, dynamic> data) {
@@ -170,7 +198,7 @@ class MusicAppViewModel {
         // Search using the new YouTube Music Complete API
         final searchResults = await api.searchMusic(query, filter: 'songs');
         
-        if (searchResults['songs'] != null) {
+          if (searchResults['songs'] != null) {
           final songs = searchResults['songs'] as List<Map<String, dynamic>>;
           final tracks = songs.map((songData) => _convertToMusicTrack(songData)).toList();
           
@@ -180,9 +208,7 @@ class MusicAppViewModel {
           // No results found
           songStream.add([]);
           print('[ViewModel] No search results for "$query"');
-        }
-        
-      } catch (e) {
+        }      } catch (e) {
         print('[ViewModel] Search error: $e');
         // Fallback to local search in all songs
         final lowerQuery = query.toLowerCase();
@@ -190,6 +216,7 @@ class MusicAppViewModel {
           song.title.toLowerCase().contains(lowerQuery) ||
           (song.artist?.toLowerCase().contains(lowerQuery) ?? false)
         ).toList();
+        
         songStream.add(filtered);
       } finally {
         _setLoading(false);
@@ -207,7 +234,7 @@ class MusicAppViewModel {
         isFavorite: !(_allSongs[index].isFavorite ?? false)
       );
       
-      // Only update stream if there are listeners to prevent unnecessary rebuilds
+      // Update stream to trigger UI rebuild
       if (songStream.hasListener) {
         songStream.add(List.from(_allSongs)); // Create new list for proper stream update
       }
@@ -224,7 +251,8 @@ class MusicAppViewModel {
       print('[ViewModel] Song details: ${songDetails.keys}');
       
       if (songDetails['streamingUrls'] != null) {
-        final streamingUrls = songDetails['streamingUrls'] as List<Map<String, dynamic>>;
+        final streamingUrlsRaw = songDetails['streamingUrls'] as List<dynamic>;
+        final streamingUrls = streamingUrlsRaw.cast<Map<String, dynamic>>();
         if (streamingUrls.isNotEmpty) {
           final highestQualityUrl = streamingUrls.first['url'] as String;
           print('[ViewModel] ✅ Stream URL obtained: ${highestQualityUrl.substring(0, 50)}...');
@@ -273,9 +301,24 @@ class MusicAppViewModel {
     }
   }
 
-  void dispose() {
+  /// Clear all data (useful for logout)
+  void clearAllData() {
+    print('[ViewModel] Clearing all data...');
+    _allSongs.clear();
     _searchTimer?.cancel();
-    songStream.close();
-    loadingStream.close();
+    if (songStream.hasListener) {
+      songStream.add([]);
+    }
+  }
+
+  void dispose() {
+    print('[ViewModel] Disposing ViewModel...');
+    _searchTimer?.cancel();
+    if (_songStream != null && !_songStream!.isClosed) {
+      _songStream!.close();
+    }
+    if (_loadingStream != null && !_loadingStream!.isClosed) {
+      _loadingStream!.close();
+    }
   }
 }

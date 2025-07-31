@@ -7,9 +7,19 @@ class ProviderStateManagement extends ChangeNotifier {
   final List<Song> _favoriteSongs = [];
   final _favoriteService = FavoriteService();
   bool _isLoading = false;
-
+  
+  // Currently playing music state
+  MusicTrack? _currentlyPlayingTrack;
+  String? _currentStreamUrl;
+  List<MusicTrack>? _currentPlaylist;
+  
   List<Song> get favoriteSongs => List.unmodifiable(_favoriteSongs); // Return immutable list
   bool get isLoading => _isLoading;
+  
+  // Getters for currently playing music
+  MusicTrack? get currentlyPlayingTrack => _currentlyPlayingTrack;
+  String? get currentStreamUrl => _currentStreamUrl;
+  List<MusicTrack>? get currentPlaylist => _currentPlaylist;
 
   /// Tải danh sách yêu thích từ Firestore
   Future<void> loadFavorites() async {
@@ -118,10 +128,35 @@ class ProviderStateManagement extends ChangeNotifier {
     await loadFavorites();
   }
 
+  /// Set currently playing track and related information
+  void setCurrentlyPlayingTrack(MusicTrack track, String streamUrl, List<MusicTrack> playlist) {
+    _currentlyPlayingTrack = track;
+    _currentStreamUrl = streamUrl;
+    _currentPlaylist = playlist;
+    notifyListeners();
+  }
+
+  /// Check if a track is currently playing (same video ID)
+  bool isTrackCurrentlyPlaying(MusicTrack track) {
+    return _currentlyPlayingTrack?.videoId == track.videoId && 
+           _currentlyPlayingTrack?.videoId.isNotEmpty == true;
+  }
+
+  /// Clear currently playing track (when music stops)
+  void clearCurrentlyPlayingTrack() {
+    _currentlyPlayingTrack = null;
+    _currentStreamUrl = null;
+    _currentPlaylist = null;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     // Clean up resources
     _favoriteSongs.clear();
+    _currentlyPlayingTrack = null;
+    _currentStreamUrl = null;
+    _currentPlaylist = null;
     super.dispose();
   }
 }

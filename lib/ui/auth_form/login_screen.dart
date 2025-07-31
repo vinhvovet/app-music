@@ -35,6 +35,9 @@ class _LoginScreenState extends State<LoginScreen> {
       final provider = context.read<ProviderStateManagement>();
       await provider.loadFavorites(); // Tải danh sách yêu thích từ Firestore
 
+      // Force reload songs for new session
+      print('[LoginScreen] Login successful, navigating to home...');
+      
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MusicHomePage()),
@@ -86,9 +89,11 @@ Future<void> signInWithGoogle() async {
       final provider = context.read<ProviderStateManagement>();
       await provider.loadFavorites(); // Load favorites from local storage
 
+      print('[LoginScreen] Google login successful, navigating to home...');
+      
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MusicApp()),
+        MaterialPageRoute(builder: (_) => const MusicHomePage()),
       );
     }
   } on FirebaseAuthException catch (e) {
@@ -211,6 +216,25 @@ Future<void> signInWithGoogle() async {
                       width: 20,
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Harmony Music Test Button
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/harmony-test');
+                },
+                icon: const Icon(Icons.music_note, color: Colors.white),
+                label: const Text(
+                  '🎵 Test Harmony Music System',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple.shade600,
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
 

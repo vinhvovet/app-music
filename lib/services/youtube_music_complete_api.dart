@@ -418,19 +418,29 @@ class YouTubeMusicCompleteAPI {
       final popularQueries = [
         'trending music 2024',
         'top hits',
-        'viral songs',
+        'viral songs', 
         'popular music',
         'chart toppers',
+        'new songs 2024',
+        'latest hits',
+        'top 50 songs',
+        'billboard hits',
+        'spotify top',
       ];
       
       final allSongs = <Map<String, dynamic>>[];
       
-      for (final query in popularQueries.take(2)) {
+      // Lấy từ nhiều queries hơn để có đủ 50 bài
+      final numQueries = (limit / 10).ceil().clamp(2, popularQueries.length);
+      final songsPerQuery = (limit / numQueries).ceil();
+      
+      for (final query in popularQueries.take(numQueries)) {
         try {
           final results = await searchMusic(query, filter: 'songs');
           if (results['songs'] != null) {
             final songs = results['songs'] as List<Map<String, dynamic>>;
-            allSongs.addAll(songs.take(5));
+            allSongs.addAll(songs.take(songsPerQuery));
+            print('[YouTubeMusicCompleteAPI] Added ${songs.take(songsPerQuery).length} songs from "$query"');
           }
           
           // Add delay to avoid rate limiting
@@ -450,7 +460,9 @@ class YouTubeMusicCompleteAPI {
         }
       }
       
-      return uniqueSongs.values.take(limit).toList();
+      final finalSongs = uniqueSongs.values.take(limit).toList();
+      print('[YouTubeMusicCompleteAPI] Returning ${finalSongs.length} unique popular songs');
+      return finalSongs;
     } catch (e) {
       print('[YouTubeMusicCompleteAPI] Get popular songs error: $e');
       return [];

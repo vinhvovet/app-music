@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
 import 'package:music_app/ui/settings/profile_screen.dart';
+import 'package:music_app/services/harmony_music_service.dart';
 import 'package:provider/provider.dart';
  // giả sử đã tạo
 
@@ -40,18 +41,41 @@ void _logout() async {
   );
 
   if (confirm == true) {
-    // Clear any cached data if needed
-    // final provider = context.read<ProviderStateManagement>();
+    try {
+      // 🛑 Stop music playback when logging out
+      final harmonyService = context.read<HarmonyMusicService>();
+      await harmonyService.clearAll(); // Stop playback and clear all data
+      print('🛑 Music stopped on logout');
 
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã đăng xuất')),
-      );
+      // Clear provider data
+      final provider = context.read<ProviderStateManagement>();
+      provider.clearCurrentlyPlayingTrack(); // Clear currently playing track
+
+      // Sign out from Firebase
+      await FirebaseAuth.instance.signOut();
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🛑 Đã đăng xuất và dừng phát nhạc'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Logout error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi đăng xuất: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
