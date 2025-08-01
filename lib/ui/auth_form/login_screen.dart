@@ -4,6 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/home/home.dart';
 import 'package:music_app/ui/auth_form/register_screen.dart';
+import 'package:music_app/controllers/lightning_player_controller.dart';
+import 'package:music_app/services/permanent_audio_service.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,17 +28,24 @@ class _LoginScreenState extends State<LoginScreen> {
   });
 
   try {
-    await FirebaseAuth.instance.signInWithEmailAndPassword(
+    final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
 
-    if (context.mounted) {
+    if (context.mounted && credential.user != null) {
+      final userId = credential.user!.uid;
       final provider = context.read<ProviderStateManagement>();
+      
+      // ⚡ Inform Lightning Music System about login
+      await lightningPlayer.onUserLogin(userId);
+      await permanentAudio.onUserLogin(userId);
+      
+      // Load user data
       await provider.loadFavorites(); // Tải danh sách yêu thích từ Firestore
 
       // Force reload songs for new session
-      print('[LoginScreen] Login successful, navigating to home...');
+      print('[LoginScreen] ⚡ Lightning login successful for user: $userId');
       
       Navigator.pushReplacement(
         context,
@@ -83,10 +92,16 @@ Future<void> signInWithGoogle() async {
     );
 
     // Once signed in, sign in with Firebase
-    await FirebaseAuth.instance.signInWithCredential(credential);
+    final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
 
-    if (context.mounted) {
+    if (context.mounted && userCredential.user != null) {
+      final userId = userCredential.user!.uid;
       final provider = context.read<ProviderStateManagement>();
+      
+      // ⚡ Inform Lightning Music System about Google login
+      await lightningPlayer.onUserLogin(userId);
+      await permanentAudio.onUserLogin(userId);
+      
       await provider.loadFavorites(); // Load favorites from local storage
 
       print('[LoginScreen] Google login successful, navigating to home...');
@@ -216,25 +231,6 @@ Future<void> signInWithGoogle() async {
                       width: 20,
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Harmony Music Test Button
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/harmony-test');
-                },
-                icon: const Icon(Icons.music_note, color: Colors.white),
-                label: const Text(
-                  '🎵 Test Harmony Music System',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple.shade600,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
                 ),
               ),
 

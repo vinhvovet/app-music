@@ -432,6 +432,38 @@ class IntelligentCacheManager extends ChangeNotifier {
     
     notifyListeners();
   }
+  
+  /// 🔄 Pre-load popular content for instant access (Background operation)
+  Future<void> preloadPopularContent() async {
+    try {
+      print('🔄 Starting popular content pre-loading...');
+      
+      // Pre-load trending songs metadata
+      final trendingPlaylist = getCachedPlaylist('trending');
+      if (trendingPlaylist != null && trendingPlaylist.isNotEmpty) {
+        // Pre-cache stream URLs for trending songs
+        final videoIds = trendingPlaylist.take(10).map((t) => t.videoId).toList();
+        await precacheStreamUrls(videoIds);
+        print('🔥 Pre-cached ${videoIds.length} trending stream URLs');
+      }
+      
+      // Pre-load recent searches if any
+      final recentSearches = _memorySearchResults.keys.take(3).toList();
+      for (final query in recentSearches) {
+        final results = getCachedSearchResults(query);
+        if (results != null && results.isNotEmpty) {
+          final videoIds = results.take(5).map((t) => t.videoId).toList();
+          await precacheStreamUrls(videoIds);
+          print('🔍 Pre-cached recent search: "$query"');
+        }
+      }
+      
+      print('✅ Popular content pre-loading completed');
+      
+    } catch (e) {
+      print('⚠️ Popular content pre-loading failed: $e');
+    }
+  }
 }
 
 /// 💾 Global cache manager instance

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:music_app/data/model/song.dart';
 import 'package:music_app/data/music_models.dart';
 import 'package:music_app/ui/now_playing/favorite_service.dart';
@@ -13,6 +14,10 @@ class ProviderStateManagement extends ChangeNotifier {
   String? _currentStreamUrl;
   List<MusicTrack>? _currentPlaylist;
   
+  // Audio player state
+  LoopMode _loopMode = LoopMode.off; // Default to no loop
+  bool _isShuffleMode = false;
+  
   List<Song> get favoriteSongs => List.unmodifiable(_favoriteSongs); // Return immutable list
   bool get isLoading => _isLoading;
   
@@ -20,6 +25,10 @@ class ProviderStateManagement extends ChangeNotifier {
   MusicTrack? get currentlyPlayingTrack => _currentlyPlayingTrack;
   String? get currentStreamUrl => _currentStreamUrl;
   List<MusicTrack>? get currentPlaylist => _currentPlaylist;
+  
+  // Getters for audio player state
+  LoopMode get loopMode => _loopMode;
+  bool get isShuffleMode => _isShuffleMode;
 
   /// Tải danh sách yêu thích từ Firestore
   Future<void> loadFavorites() async {
@@ -150,6 +159,30 @@ class ProviderStateManagement extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set loop mode
+  void setLoopMode(LoopMode mode) {
+    _loopMode = mode;
+    notifyListeners();
+  }
+
+  /// Toggle loop mode between off and all
+  void toggleLoopMode() {
+    _loopMode = _loopMode == LoopMode.off ? LoopMode.all : LoopMode.off;
+    notifyListeners();
+  }
+
+  /// Set shuffle mode
+  void setShuffleMode(bool isShuffling) {
+    _isShuffleMode = isShuffling;
+    notifyListeners();
+  }
+
+  /// Toggle shuffle mode
+  void toggleShuffleMode() {
+    _isShuffleMode = !_isShuffleMode;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     // Clean up resources
@@ -157,6 +190,8 @@ class ProviderStateManagement extends ChangeNotifier {
     _currentlyPlayingTrack = null;
     _currentStreamUrl = null;
     _currentPlaylist = null;
+    _loopMode = LoopMode.off;
+    _isShuffleMode = false;
     super.dispose();
   }
 }

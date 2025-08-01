@@ -4,6 +4,9 @@ import 'package:music_app/state%20management/provider.dart';
 import 'package:music_app/ui/auth_form/login_screen.dart';
 import 'package:music_app/ui/settings/profile_screen.dart';
 import 'package:music_app/services/harmony_music_service.dart';
+import 'package:music_app/controllers/lightning_player_controller.dart';
+import 'package:music_app/services/permanent_audio_service.dart';
+import 'package:music_app/ui/now_playing/audio_player_manager.dart';
 import 'package:provider/provider.dart';
  // giả sử đã tạo
 
@@ -42,10 +45,19 @@ void _logout() async {
 
   if (confirm == true) {
     try {
+      // ⚡ Inform Lightning Music System about logout
+      await lightningPlayer.onUserLogout();
+      await permanentAudio.onUserLogout();
+      print('⚡ Lightning Music System: User session cleared');
+
       // 🛑 Stop music playback when logging out
       final harmonyService = context.read<HarmonyMusicService>();
       await harmonyService.clearAll(); // Stop playback and clear all data
-      print('🛑 Music stopped on logout');
+      print('🛑 Harmony Music Service cleared');
+
+      // 🎵 Dispose AudioPlayerManager to free resources
+      await AudioPlayerManager().dispose();
+      print('🎵 AudioPlayerManager disposed');
 
       // Clear provider data
       final provider = context.read<ProviderStateManagement>();
@@ -61,7 +73,7 @@ void _logout() async {
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🛑 Đã đăng xuất và dừng phát nhạc'),
+            content: Text('⚡ Đã đăng xuất và lưu session'),
             backgroundColor: Colors.green,
           ),
         );

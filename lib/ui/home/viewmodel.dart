@@ -250,6 +250,14 @@ class MusicAppViewModel {
       final songDetails = await api.getSongDetails(videoId);
       print('[ViewModel] Song details: ${songDetails.keys}');
       
+      // Check if this is a fallback response
+      if (songDetails['fallback'] == true) {
+        print('[ViewModel] ⚠️ Fallback response - streams not available');
+        print('[ViewModel] Title: ${songDetails['title']}');
+        print('[ViewModel] Artist: ${songDetails['artist']}');
+        return null;
+      }
+      
       if (songDetails['streamingUrls'] != null) {
         final streamingUrlsRaw = songDetails['streamingUrls'] as List<dynamic>;
         final streamingUrls = streamingUrlsRaw.cast<Map<String, dynamic>>();
@@ -268,6 +276,9 @@ class MusicAppViewModel {
       }
       
       print('[ViewModel] ❌ No stream URL available for $videoId');
+      if (songDetails['error'] != null) {
+        print('[ViewModel] Error: ${songDetails['error']}');
+      }
       return null;
       
     } catch (e) {

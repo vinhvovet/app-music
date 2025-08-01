@@ -332,11 +332,34 @@ class YouTubeMusicCompleteAPI {
       };
     } catch (e) {
       print('[YouTubeMusicCompleteAPI] Get song details error: $e');
-      return {
-        'videoId': videoId,
-        'error': e.toString(),
-        'streamingUrls': [],
-      };
+      
+      // 🔄 Fallback: Try to get basic video info without streams
+      try {
+        final video = await _youtube.videos.get(videoId);
+        print('[YouTubeMusicCompleteAPI] Fallback: Got basic video info');
+        
+        return {
+          'videoId': videoId,
+          'title': video.title,
+          'artist': video.author,
+          'duration': video.duration?.inSeconds,
+          'thumbnail': video.thumbnails.highResUrl,
+          'description': video.description,
+          'streamingUrls': [],
+          'error': 'Streams not available: ${e.toString()}',
+          'fallback': true,
+        };
+      } catch (fallbackError) {
+        print('[YouTubeMusicCompleteAPI] Fallback also failed: $fallbackError');
+        
+        return {
+          'videoId': videoId,
+          'error': e.toString(),
+          'streamingUrls': [],
+          'title': 'Unknown Title',
+          'artist': 'Unknown Artist',
+        };
+      }
     }
   }
 

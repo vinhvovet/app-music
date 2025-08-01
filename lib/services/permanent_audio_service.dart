@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 
 /// Audio Service luôn chạy background, KHÔNG BAO GIỜ dispose
 /// → Loại bỏ 200ms initialization overhead
+/// 🔄 Session-aware: Tự động khôi phục khi login/logout
 class PermanentAudioService extends ChangeNotifier {
   static final PermanentAudioService _instance = PermanentAudioService._internal();
   factory PermanentAudioService() => _instance;
@@ -16,12 +17,19 @@ class PermanentAudioService extends ChangeNotifier {
   late AudioSession _audioSession;
   bool _isInitialized = false;
   
+  // Session management
+  String? _currentUserId;
+  bool _sessionRestored = false;
+  
   // Stream states
   String? _currentStreamUrl;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
   bool _isBuffering = false;
+
+  // Completion callback for auto-next
+  Function()? onSongCompleted;
 
   // Getters
   bool get isInitialized => _isInitialized;
@@ -30,6 +38,77 @@ class PermanentAudioService extends ChangeNotifier {
   Duration get position => _position;
   Duration get duration => _duration;
   String? get currentStreamUrl => _currentStreamUrl;
+  String? get currentUserId => _currentUserId;
+  bool get isSessionRestored => _sessionRestored;
+
+  /// 🔄 Session management - Handle login/logout gracefully
+  Future<void> onUserLogin(String userId) async {
+    print('👤 User logged in: $userId');
+    _currentUserId = userId;
+    await _restoreUserSession();
+    notifyListeners();
+  }
+
+  Future<void> onUserLogout() async {
+    print('👋 User logged out');
+    await _saveCurrentSession();
+    await _clearCurrentPlayback();
+    _currentUserId = null;
+    notifyListeners();
+  }
+
+  Future<void> _restoreUserSession() async {
+    try {
+      final sessionBox = await Hive.openBox('UserSessions');
+      final userSession = sessionBox.get(_currentUserId) as Map<String, dynamic>?;
+      
+      if (userSession != null) {
+        print('🔄 Restoring user session...');
+        final lastStreamUrl = userSession['last_stream_url'] as String?;
+        final lastPosition = userSession['last_position'] as int? ?? 0;
+        
+        if (lastStreamUrl != null) {
+          await _audioPlayer.setUrl(lastStreamUrl);
+          await _audioPlayer.seek(Duration(milliseconds: lastPosition));
+          _currentStreamUrl = lastStreamUrl;
+          print('✅ Session restored: ${lastStreamUrl.substring(0, 50)}...');
+        }
+        _sessionRestored = true;
+      }
+    } catch (e) {
+      print('⚠️ Failed to restore session: $e');
+    }
+  }
+
+  Future<void> _saveCurrentSession() async {
+    if (_currentUserId == null || _currentStreamUrl == null) return;
+    
+    try {
+      final sessionBox = await Hive.openBox('UserSessions');
+      await sessionBox.put(_currentUserId, {
+        'last_stream_url': _currentStreamUrl,
+        'last_position': _position.inMilliseconds,
+        'saved_at': DateTime.now().millisecondsSinceEpoch,
+        'title': 'Unknown', // TODO: Add current song title
+      });
+      print('💾 Session saved for user: $_currentUserId');
+    } catch (e) {
+      print('⚠️ Failed to save session: $e');
+    }
+  }
+
+  Future<void> _clearCurrentPlayback() async {
+    try {
+      await _audioPlayer.stop();
+      _currentStreamUrl = null;
+      _position = Duration.zero;
+      _duration = Duration.zero;
+      _isPlaying = false;
+      print('🔄 Current playback cleared');
+    } catch (e) {
+      print('⚠️ Failed to clear playback: $e');
+    }
+  }
 
   /// 🚀 Initialize audio pipeline ONCE - Called from main()
   Future<void> initializePermanent() async {
@@ -142,7 +221,9 @@ class PermanentAudioService extends ChangeNotifier {
       notifyListeners();
       
       if (state.processingState == ProcessingState.completed) {
-        print('🎵 Song completed - Ready for next instant play');
+        print('🎵 Song completed - Auto-next triggered');
+        // Trigger auto-next callback
+        onSongCompleted?.call();
       }
     });
 
@@ -239,6 +320,32 @@ class PermanentAudioService extends ChangeNotifier {
       
     } catch (e) {
       print('⚠️ Failed to preload next song: $e');
+    }
+  }
+  
+  /// 🔥 Warm up audio pipeline for instant playback
+  Future<void> warmUpPipeline() async {
+    try {
+      print('🔥 Warming up audio pipeline...');
+      
+      if (!_isInitialized) {
+        print('⚠️ Audio service not initialized, skipping pipeline warmup');
+        return;
+      }
+      
+      // Test a short silent audio to warm up the pipeline
+      // This ensures hardware acceleration and audio drivers are ready
+      const silentTestUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwIcgczx2IY2ASyBzvPYiTYCHIHM8tiJNwIcgczx2Ic2AS0=';
+      
+      await _audioPlayer.setUrl(silentTestUrl);
+      await _audioPlayer.play();
+      await Future.delayed(const Duration(milliseconds: 50));
+      await _audioPlayer.stop();
+      
+      print('✅ Audio pipeline warmed up - Ready for instant playback');
+      
+    } catch (e) {
+      print('⚠️ Pipeline warmup failed (not critical): $e');
     }
   }
 

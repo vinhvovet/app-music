@@ -9,6 +9,7 @@ import 'package:music_app/ui/now_playing/playing.dart';
 import 'package:music_app/ui/components/now_playing_bar.dart';
 import '../../data/music_models.dart';
 import '../../data/model/song.dart';
+import '../../data/test_songs.dart';
 import '../../state management/provider.dart';
 
 class MusicApp extends StatelessWidget {
@@ -107,6 +108,19 @@ class _MusicHomePageState extends State<MusicHomePage> {
               Navigator.pushNamed(context, '/test-api');
             },
           ),
+          CupertinoActionSheetAction(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                SizedBox(width: 8),
+                Text('🎼 Load Test Songs'),
+              ],
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              _loadTestSongs();
+            },
+          ),
         ],
         cancelButton: CupertinoActionSheetAction(
           child: const Text('Cancel'),
@@ -125,13 +139,6 @@ class _MusicHomePageState extends State<MusicHomePage> {
         heroTag: "main_nav",
         transitionBetweenRoutes: false,
         middle: const Text('Music Player'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.sparkles),
-          onPressed: () {
-            _showTestMenu(context);
-          },
-        ),
       ),
       child: CupertinoTabScaffold(
         tabBar: CupertinoTabBar(
@@ -158,6 +165,25 @@ class _MusicHomePageState extends State<MusicHomePage> {
         tabBuilder: (context, index) {
           return _tabs[index];
         },
+      ),
+    );
+  }
+  
+  /// 🎼 Load test songs that are known to work
+  void _loadTestSongs() {
+    // Navigate to HomeTab and trigger test songs loading
+    // For now, just show a message since we need to communicate with HomeTab
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Test Songs'),
+        content: const Text('Please use the tab interface to load test songs from the HomeTab.'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
       ),
     );
   }
@@ -292,7 +318,7 @@ class _HomeTabState extends State<HomeTab> {
                       children: [
                         CircularProgressIndicator(),
                         SizedBox(height: 16),
-                        Text('Loading'),
+                        Text('Loading', style: TextStyle(color: Colors.black,fontSize: 16)),
                         SizedBox(height: 8),
     
                       ],
@@ -488,8 +514,8 @@ class _HomeTabState extends State<HomeTab> {
           showCupertinoDialog(
             context: context,
             builder: (context) => CupertinoAlertDialog(
-              title: const Text('Error'),
-              content: Text('❌ Cannot play: ${track.title}'),
+              title: const Text('Playback Error'),
+              content: Text('❌ Cannot play: ${track.title}\n\nThis track may be:\n• Region-locked\n• Temporarily unavailable\n• Copyright protected\n\nPlease try another song.'),
               actions: [
                 CupertinoDialogAction(
                   child: const Text('OK'),
@@ -535,6 +561,52 @@ class _HomeTabState extends State<HomeTab> {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
+  }
+  
+  /// 🎼 Load test songs that are known to work
+  void _loadTestSongs() async {
+    try {
+      TestSongs.showTestMessage();
+      
+      final testSongs = TestSongs.getTestPlaylist();
+      
+      setState(() {
+        songs = testSongs;
+        isLoading = false;
+      });
+      
+      if (mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('Test Songs Loaded'),
+            content: Text('✅ Loaded ${testSongs.length} test songs\n\nThese songs are verified to work for testing the app.'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to load test songs: $e'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 }
 

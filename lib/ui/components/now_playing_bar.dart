@@ -287,27 +287,6 @@ class _NowPlayingBarState extends State<NowPlayingBar>
                                 ],
                               ),
                             ),
-                            
-                            const SizedBox(width: 8),
-                            
-                            // Next button
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
-                                onTap: () {
-                                  // TODO: Implement next song functionality
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4),
-                                  child: Icon(
-                                    CupertinoIcons.forward_fill,
-                                    size: 20,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),

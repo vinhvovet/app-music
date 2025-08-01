@@ -56,8 +56,6 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   late int _selectedItemIndex;
   late MusicTrack _song;
   double _currentAnimationPosition = 0.0;
-  bool _isShuffle = false;
-  late LoopMode _loopMode;
 
   late PageController _pageController;
   int _currentPage = 0;
@@ -87,6 +85,15 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       _audioPlayerManager.prepare(isNewSong: false);
     }
     
+    // 🔄 Update provider with initial current track info
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+        provider.setCurrentlyPlayingTrack(widget.playingSong, widget.streamUrl, widget.songs);
+        print('✅ Provider initialized with current song: ${widget.playingSong.title}');
+      }
+    });
+    
     // Auto-play nhạc khi vào giao diện
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -97,7 +104,6 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     });
     
     _selectedItemIndex = widget.songs.indexOf(widget.playingSong);
-    _loopMode = LoopMode.all; // Default to loop all for auto-next
     _audioPlayerManager.playerStateStream.listen((playerState) {
       print('Player state: ${playerState.processingState}, playing: ${playerState.playing}');
       if (mounted && playerState.processingState == ProcessingState.completed) {
@@ -424,20 +430,21 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       return;
     }
     
-    if (_loopMode == LoopMode.one) {
-      print('Looping current song');
-      _audioPlayerManager.player.seek(Duration.zero);
-      _audioPlayerManager.player.play();
+    final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+    
+    // If loop mode is off, stop after the song completes
+    if (provider.loopMode == LoopMode.off) {
+      print('Loop mode off, stopping after song completion');
       return;
     }
     
-    if (_isShuffle) {
+    if (provider.isShuffleMode) {
       _selectedItemIndex = Random().nextInt(widget.songs.length);
       print('Shuffle mode: next index = $_selectedItemIndex');
     } else if (_selectedItemIndex < widget.songs.length - 1) {
       ++_selectedItemIndex;
       print('Normal mode: next index = $_selectedItemIndex');
-    } else if (_loopMode == LoopMode.all) {
+    } else if (provider.loopMode == LoopMode.all) {
       _selectedItemIndex = 0;
       print('Loop all: back to first song');
     } else {
@@ -462,6 +469,12 @@ class _NowPlayingPageState extends State<NowPlayingPage>
           _audioPlayerManager.updateSongUrl(streamUrl);
           _audioPlayerManager.prepare(isNewSong: true);
           
+          // 🔄 Update provider with new current track info
+          if (mounted) {
+            final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+            provider.setCurrentlyPlayingTrack(nextSong, streamUrl, widget.songs);
+          }
+          
           // Auto-play the next song immediately
           Future.delayed(const Duration(milliseconds: 300), () {
             if (mounted) {
@@ -480,6 +493,12 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       final fallbackUrl = nextSong.url ?? nextSong.extras?['url'] ?? '';
       _audioPlayerManager.updateSongUrl(fallbackUrl);
       _audioPlayerManager.prepare(isNewSong: true);
+      
+      // 🔄 Update provider with fallback info
+      if (mounted) {
+        final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+        provider.setCurrentlyPlayingTrack(nextSong, fallbackUrl, widget.songs);
+      }
       
       // Auto-play with fallback URL
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -504,31 +523,33 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   }
 
   Widget _mediaButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        MediaButtonControl(
-            function: () => setState(() => _isShuffle = !_isShuffle),
-            icon: Icons.shuffle,
-            color: _isShuffle ? Colors.deepPurple : Colors.grey,
-            size: 24),
-        MediaButtonControl(
-            function: _setPrevSong,
-            icon: Icons.skip_previous,
-            color: Colors.deepPurple,
-            size: 36),
-        _playButton(),
-        MediaButtonControl(
-            function: _setNextSong,
-            icon: Icons.skip_next,
-            color: Colors.deepPurple,
-            size: 36),
-        MediaButtonControl(
-            function: _setupRepeatOption,
-            icon: _repeatingIcon(),
-            color: _loopMode == LoopMode.off ? Colors.grey : Colors.deepPurple,
-            size: 24),
-      ],
+    return Consumer<ProviderStateManagement>(
+      builder: (context, provider, child) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          MediaButtonControl(
+              function: () => provider.toggleShuffleMode(),
+              icon: Icons.shuffle,
+              color: provider.isShuffleMode ? Colors.deepPurple : Colors.grey,
+              size: 24),
+          MediaButtonControl(
+              function: _setPrevSong,
+              icon: Icons.skip_previous,
+              color: Colors.deepPurple,
+              size: 36),
+          _playButton(),
+          MediaButtonControl(
+              function: _setNextSong,
+              icon: Icons.skip_next,
+              color: Colors.deepPurple,
+              size: 36),
+          MediaButtonControl(
+              function: _setupRepeatOption,
+              icon: _repeatingIcon(provider),
+              color: provider.loopMode == LoopMode.off ? Colors.grey : Colors.deepPurple,
+              size: 24),
+        ],
+      ),
     );
   }
 
@@ -620,12 +641,14 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   }
 
   void _setNextSong() async {
-    if (_isShuffle) {
+    final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+    
+    if (provider.isShuffleMode) {
       var random = Random();
       _selectedItemIndex = random.nextInt(widget.songs.length);
     } else if (_selectedItemIndex < widget.songs.length - 1) {
       ++_selectedItemIndex;
-    } else if (_loopMode == LoopMode.all &&
+    } else if (provider.loopMode == LoopMode.all &&
         _selectedItemIndex == widget.songs.length - 1) {
       _selectedItemIndex = 0;
     }
@@ -652,28 +675,45 @@ class _NowPlayingPageState extends State<NowPlayingPage>
           setState(() {
             _song = nextSong;
           });
+          
+          // 🔄 Update provider with new current track info
+          if (mounted) {
+            final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+            provider.setCurrentlyPlayingTrack(nextSong, streamUrl, widget.songs);
+            print('✅ Provider updated for next song: ${nextSong.title}');
+          }
         }
       }
     } catch (e) {
       print('Error getting stream URL for next song: $e');
       // Fallback to old method if API fails
-      _audioPlayerManager.updateSongUrl(nextSong.url ?? nextSong.extras?['url'] ?? '');
+      final fallbackUrl = nextSong.url ?? nextSong.extras?['url'] ?? '';
+      _audioPlayerManager.updateSongUrl(fallbackUrl);
       _audioPlayerManager.prepare(isNewSong: true);
       _audioPlayerManager.player.play();
       _resetRotationAnim();
       setState(() {
         _song = nextSong;
       });
+      
+      // 🔄 Update provider with fallback info
+      if (mounted) {
+        final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+        provider.setCurrentlyPlayingTrack(nextSong, fallbackUrl, widget.songs);
+        print('✅ Provider updated for next song (fallback): ${nextSong.title}');
+      }
     }
   }
 
   void _setPrevSong() async {
-    if (_isShuffle) {
+    final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+    
+    if (provider.isShuffleMode) {
       var random = Random();
       _selectedItemIndex = random.nextInt(widget.songs.length);
     } else if (_selectedItemIndex > 0) {
       --_selectedItemIndex;
-    } else if (_loopMode == LoopMode.all && _selectedItemIndex == 0) {
+    } else if (provider.loopMode == LoopMode.all && _selectedItemIndex == 0) {
       _selectedItemIndex = widget.songs.length - 1;
     }
     if (_selectedItemIndex < 0) {
@@ -699,39 +739,48 @@ class _NowPlayingPageState extends State<NowPlayingPage>
           setState(() {
             _song = prevSong;
           });
+          
+          // 🔄 Update provider with new current track info
+          if (mounted) {
+            final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+            provider.setCurrentlyPlayingTrack(prevSong, streamUrl, widget.songs);
+            print('✅ Provider updated for previous song: ${prevSong.title}');
+          }
         }
       }
     } catch (e) {
       print('Error getting stream URL for previous song: $e');
       // Fallback to old method if API fails
-      _audioPlayerManager.updateSongUrl(prevSong.url ?? prevSong.extras?['url'] ?? '');
+      final fallbackUrl = prevSong.url ?? prevSong.extras?['url'] ?? '';
+      _audioPlayerManager.updateSongUrl(fallbackUrl);
       _audioPlayerManager.prepare(isNewSong: true);
       _audioPlayerManager.player.play();
       _resetRotationAnim();
       setState(() {
         _song = prevSong;
       });
+      
+      // 🔄 Update provider with fallback info
+      if (mounted) {
+        final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+        provider.setCurrentlyPlayingTrack(prevSong, fallbackUrl, widget.songs);
+        print('✅ Provider updated for previous song (fallback): ${prevSong.title}');
+      }
     }
   }
 
   void _setupRepeatOption() {
-    if (_loopMode == LoopMode.off) {
-      _loopMode = LoopMode.one;
-    } else if (_loopMode == LoopMode.one) {
-      _loopMode = LoopMode.all;
-    } else {
-      _loopMode = LoopMode.off;
-    }
-    setState(() {
-      _audioPlayerManager.player.setLoopMode(_loopMode);
-    });
+    final provider = Provider.of<ProviderStateManagement>(context, listen: false);
+    // Toggle between off and all (2 modes only)
+    provider.toggleLoopMode();
+    // Update the audio player with the new loop mode
+    _audioPlayerManager.player.setLoopMode(provider.loopMode);
   }
 
-  IconData _repeatingIcon() {
-    return switch (_loopMode) {
-      LoopMode.one => Icons.repeat_one,
+  IconData _repeatingIcon(ProviderStateManagement provider) {
+    return switch (provider.loopMode) {
       LoopMode.all => Icons.repeat_on,
-      _ => Icons.repeat,
+      _ => Icons.repeat, // LoopMode.off
     };
   }
 
